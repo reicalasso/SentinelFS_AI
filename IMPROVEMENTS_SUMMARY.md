@@ -35,6 +35,7 @@ This document summarizes the improvements made to the SentinelFS AI model to add
   - PGD (Projected Gradient Descent) attack implementation
   - Adversarial training capability for improved robustness
   - Robustness evaluation tools
+  - CuDNN-compatible gradient handling for sequence models during adversarial example generation
 
 ### 4. Ensemble Methods
 - **File**: `sentinelfs_ai/training/ensemble_training.py`
@@ -59,6 +60,7 @@ This document summarizes the improvements made to the SentinelFS AI model to add
 - **Cross-validation**: K-fold cross-validation for more robust evaluation
 - **Stratified Evaluation**: Performance assessment by anomaly type
 - **Temporal Validation**: Performance evaluation over time periods
+  - Consistent target shaping to keep loss computations stable across folds
 
 ## Implementation Changes
 

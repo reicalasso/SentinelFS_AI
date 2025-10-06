@@ -33,7 +33,7 @@ def fgsm_attack(
         Adversarial examples
     """
     was_training = model.training  # Remember if model was in training mode
-    model.eval()  # Set model to evaluation mode for inference
+    model.train()  # Ensure gradients can flow through RNN layers
     
     data = data.clone().detach().requires_grad_(True)
     
@@ -50,8 +50,8 @@ def fgsm_attack(
     perturbed_data = torch.clamp(perturbed_data, 0, 1)  # Adjust bounds as needed
     
     # Restore original training state
-    if was_training:
-        model.train()
+    if not was_training:
+        model.eval()
     
     return perturbed_data
 

@@ -298,7 +298,7 @@ class EnsembleManager:
     def save_ensemble(self, save_dir: Path):
         """Save all ensemble models."""
         save_dir = Path(save_dir)
-        save_dir.mkdir(exist_ok=True)
+        save_dir.mkdir(parents=True, exist_ok=True)
         
         # Save each model
         for i, model in enumerate(self.models):

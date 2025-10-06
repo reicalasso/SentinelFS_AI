@@ -271,10 +271,11 @@ class AdvancedEvaluator:
             for epoch in range(10):  # Limited epochs for validation
                 for batch_x, batch_y in train_loader:
                     batch_x, batch_y = batch_x.to(device), batch_y.to(device)
-                    
+
                     optimizer.zero_grad()
                     outputs = model(batch_x)
-                    loss = criterion(outputs, batch_y)
+                    targets = batch_y.unsqueeze(1)
+                    loss = criterion(outputs, targets)
                     loss.backward()
                     optimizer.step()
             
