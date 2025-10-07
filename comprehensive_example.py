@@ -1,315 +1,389 @@
-#!/usr/bin/env python
 """
-Comprehensive example demonstrating the improved SentinelFS AI model.
-Shows usage of advanced architectures, adversarial training, ensemble methods, and evaluation.
+Comprehensive example showcasing all enhanced features of SentinelFS AI.
+
+This example demonstrates:
+- Data generation with realistic patterns
+- Model training with advanced techniques
+- Model management and versioning
+- Inference with explainability
+- Evaluation with advanced metrics
+- Ensemble methods
+- Adversarial training and robustness
 """
 
 import torch
 import numpy as np
-from torch.utils.data import TensorDataset, DataLoader
 from pathlib import Path
+import json
+from datetime import datetime
 
+# Import all enhanced SentinelFS AI components
 from sentinelfs_ai import (
-    # Basic models
-    BehavioralAnalyzer,
-    TransformerBehavioralAnalyzer,
-    CNNLSTMAnalyzer,
+    # Core types
+    AnalysisResult, AnomalyType, TrainingConfig,
     
-    # Data generation
-    generate_sample_data,
+    # Models
+    BehavioralAnalyzer, TransformerBehavioralAnalyzer, 
+    CNNLSTMAnalyzer, EnsembleAnalyzer, AdaptiveAnalyzer,
+    
+    # Data processing
+    FeatureExtractor, DataProcessor, generate_sample_data,
     generate_realistic_access_data,
     
-    # Training components
-    train_model,
-    AdversarialTrainer,
-    EnsembleManager,
+    # Training
+    train_model, train_robust, train_with_augmentation,
+    calculate_metrics, evaluate_model, EarlyStopping,
+    AdversarialTrainer, RobustnessEvaluator,
     
     # Evaluation
-    AdvancedEvaluator,
-    plot_roc_curve,
-    plot_confusion_matrix,
+    AdvancedEvaluator, plot_roc_curve, plot_precision_recall_curve,
+    plot_confusion_matrix, calibration_plot,
     
-    # Feature extraction
-    FeatureExtractor
+    # Inference
+    InferenceEngine,
+    
+    # Management
+    ModelManager, save_checkpoint, load_checkpoint,
+    
+    # Utils
+    get_logger
 )
 
-
-def main():
-    print("=" * 80)
-    print("🛡️  SentinelFS AI - Comprehensive Model Improvement Example")
-    print("=" * 80)
+def run_comprehensive_example():
+    """Run the comprehensive example demonstrating all features."""
+    logger = get_logger(__name__)
+    logger.info("Starting comprehensive SentinelFS AI example...")
     
-    # 1. Generate realistic data with complex patterns
-    print("\n[1/6] Generating realistic data with complex patterns...")
+    # Set random seed for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
     
-    # Use the new realistic data generator
-    train_data, train_labels, train_types = generate_realistic_access_data(
+    # 1. Generate training data with realistic patterns
+    logger.info("1. Generating realistic training data...")
+    X, y, anomaly_types = generate_realistic_access_data(
         num_samples=2000,
         seq_len=20,
-        anomaly_ratio=0.15,  # More realistic ratio
-        complexity_level='medium'
+        anomaly_ratio=0.2,  # 20% anomalies
+        complexity_level='high'  # More complex patterns
     )
     
-    test_data, test_labels, test_types = generate_realistic_access_data(
-        num_samples=500,
-        seq_len=20,
-        anomaly_ratio=0.15,
-        complexity_level='medium'
+    logger.info(f"Generated {len(X)} samples with shape {X.shape}")
+    logger.info(f"Anomaly distribution: {np.bincount(y.flatten())}")
+    logger.info(f"Anomaly types distribution: {np.bincount(anomaly_types.flatten()) if anomaly_types is not None else 'N/A'}")
+    
+    # 2. Set up data processing
+    logger.info("2. Setting up data processing...")
+    data_processor = DataProcessor(
+        batch_size=64,
+        val_split=0.2,
+        test_split=0.1,
+        scaler_type='standard',
+        normalize_features=True
     )
     
-    print(f"✓ Generated {len(train_data)} training samples, {len(test_data)} test samples")
-    print(f"  - Training anomaly ratio: {train_labels.mean():.3f}")
-    print(f"  - Test anomaly ratio: {test_labels.mean():.3f}")
+    # Prepare data with anomaly types for multi-task learning
+    data_loaders, multi_loaders = data_processor.prepare_data_with_anomaly_types(X, y, anomaly_types)
     
-    # 2. Split data for validation
-    val_size = int(len(train_data) * 0.15)
-    X_train, X_val = train_data[:-val_size], train_data[-val_size:]
-    y_train, y_val = train_labels[:-val_size], train_labels[-val_size:]
-    types_train, types_val = train_types[:-val_size], train_types[-val_size:]
+    # Get data statistics
+    stats = data_processor.get_data_statistics(X, y)
+    logger.info(f"Dataset statistics: {stats['label_distribution']}")
     
-    # 3. Normalize features
-    print("\n[2/6] Feature normalization...")
-    feature_extractor = FeatureExtractor()
-    X_train_norm = feature_extractor.fit_transform(X_train)
-    X_val_norm = feature_extractor.transform(X_val)
-    X_test_norm = feature_extractor.transform(test_data)
+    # 3. Train multiple model architectures
+    logger.info("3. Training multiple model architectures...")
     
-    print("✓ Features normalized using StandardScaler")
+    # 3a. Train Behavioral Analyzer (LSTM-based)
+    logger.info("Training Behavioral Analyzer...")
+    model_config = {
+        'input_size': X.shape[2],  # Number of features
+        'hidden_size': 128,
+        'num_layers': 3,
+        'dropout': 0.3,
+        'use_attention': True,
+        'bidirectional': True
+    }
     
-    # 4. Create data loaders
-    train_dataset = TensorDataset(
-        torch.FloatTensor(X_train_norm),
-        torch.FloatTensor(y_train)
-    )
-    val_dataset = TensorDataset(
-        torch.FloatTensor(X_val_norm),
-        torch.FloatTensor(y_val)
-    )
-    test_dataset = TensorDataset(
-        torch.FloatTensor(X_test_norm),
-        torch.FloatTensor(test_labels)
-    )
-    
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    
-    dataloaders = {'train': train_loader, 'val': val_loader}
-    
-    # 5. Train multiple model architectures
-    print("\n[3/6] Training multiple model architectures...")
-    
-    input_size = X_train_norm.shape[2]  # Number of features
-    
-    # LSTM-based model (traditional)
-    print("  - Training LSTM model...")
-    lstm_model = BehavioralAnalyzer(
-        input_size=input_size,
-        hidden_size=64,
-        num_layers=3,
-        dropout=0.3,
-        use_attention=True,
-        bidirectional=True
-    )
-    
+    lstm_model = BehavioralAnalyzer(**model_config)
     lstm_history = train_model(
         model=lstm_model,
-        dataloaders=dataloaders,
-        epochs=20,  # Reduced for demo
-        lr=0.001
+        dataloaders=data_loaders,
+        epochs=20,
+        lr=0.001,
+        patience=5,
+        gradient_clipping=1.0,
+        loss_function='bce',
+        log_interval=5
     )
     
-    # Transformer model (advanced)
-    print("  - Training Transformer model...")
+    # 3b. Train Transformer model
+    logger.info("Training Transformer model...")
     transformer_model = TransformerBehavioralAnalyzer(
-        input_size=input_size,
-        d_model=64,
+        input_size=X.shape[2],
+        d_model=128,
         nhead=8,
-        num_layers=3,
-        dropout=0.1,
+        num_layers=4,
+        dropout=0.3,
         seq_len=20
     )
     
     transformer_history = train_model(
         model=transformer_model,
-        dataloaders=dataloaders,
-        epochs=20,
-        lr=0.001
+        dataloaders=data_loaders,
+        epochs=15,
+        lr=0.0005,
+        patience=5,
+        gradient_clipping=1.0
     )
     
-    # CNN-LSTM model (hybrid)
-    print("  - Training CNN-LSTM model...")
+    # 3c. Train CNN-LSTM model
+    logger.info("Training CNN-LSTM model...")
     cnn_lstm_model = CNNLSTMAnalyzer(
-        input_size=input_size,
-        hidden_size=64,
-        num_layers=2,
+        input_size=X.shape[2],
+        hidden_size=128,
+        num_layers=3,
         dropout=0.3
     )
     
     cnn_lstm_history = train_model(
         model=cnn_lstm_model,
-        dataloaders=dataloaders,
-        epochs=20,
-        lr=0.001
-    )
-    
-    print("✓ All models trained successfully")
-    
-    # 6. Adversarial training example
-    print("\n[4/6] Adversarial training for robustness...")
-    
-    # Create a new model for adversarial training
-    robust_model = BehavioralAnalyzer(
-        input_size=input_size,
-        hidden_size=64,
-        num_layers=3,
-        dropout=0.3
-    )
-    
-    # Use the AdversarialTrainer
-    adv_trainer = AdversarialTrainer(
-        model=robust_model,
-        dataloaders=dataloaders,
+        dataloaders=data_loaders,
         epochs=15,
         lr=0.001,
-        adversarial_ratio=0.3,  # 30% adversarial examples
+        patience=5,
+        gradient_clipping=1.0
+    )
+    
+    # 4. Train with adversarial techniques for robustness
+    logger.info("4. Training with adversarial techniques...")
+    robust_model = BehavioralAnalyzer(**model_config)
+    robust_history = train_robust(
+        model=robust_model,
+        dataloaders=data_loaders,
+        epochs=15,
+        lr=0.001,
+        adversarial_training=True,
+        adversarial_ratio=0.3,
         epsilon=0.01
     )
     
-    adv_history = adv_trainer.train()
-    print("✓ Adversarial training completed")
-    
-    # 7. Ensemble training
-    print("\n[5/6] Ensemble training...")
-    
-    ensemble_manager = EnsembleManager(
-        input_size=input_size,
-        ensemble_size=3,
-        base_architecture='mixed',  # Use different architectures
-        hidden_size=64,
-        num_layers=2,
-        dropout=0.3,
-        seq_len=20
-    )
-    
-    ensemble_histories = ensemble_manager.train_ensemble(
-        dataloaders,
-        epochs=15,
-        lr=0.001
-    )
-    
-    # Update ensemble weights based on validation performance
-    ensemble_manager.update_weights(val_loader)
-    print("✓ Ensemble training completed")
-    
-    # 8. Advanced evaluation
-    print("\n[6/6] Advanced evaluation...")
-    
+    # 5. Evaluate all models comprehensively
+    logger.info("5. Evaluating models with advanced metrics...")
     evaluator = AdvancedEvaluator()
     
-    # Evaluate all models
-    models_to_evaluate = [
-        ("LSTM", lstm_model),
-        ("Transformer", transformer_model),
-        ("CNN-LSTM", cnn_lstm_model),
-        ("Adversarial", robust_model)
-    ]
+    # Evaluate LSTM model
+    lstm_metrics = evaluator.evaluate_model_comprehensive(
+        model=lstm_model,
+        test_loader=data_loaders['test']
+    )
+    logger.info(f"LSTM Model - Accuracy: {lstm_metrics['accuracy']:.4f}, F1: {lstm_metrics['f1_score']:.4f}")
     
-    print("\nModel Performance Comparison:")
-    print("-" * 60)
+    # Evaluate Transformer model
+    transformer_metrics = evaluator.evaluate_model_comprehensive(
+        model=transformer_model,
+        test_loader=data_loaders['test']
+    )
+    logger.info(f"Transformer Model - Accuracy: {transformer_metrics['accuracy']:.4f}, F1: {transformer_metrics['f1_score']:.4f}")
     
-    for name, model in models_to_evaluate:
-        print(f"\n{name} Model:")
-        metrics = evaluator.evaluate_model_comprehensive(model, test_loader)
+    # Evaluate CNN-LSTM model
+    cnn_lstm_metrics = evaluator.evaluate_model_comprehensive(
+        model=cnn_lstm_model,
+        test_loader=data_loaders['test']
+    )
+    logger.info(f"CNN-LSTM Model - Accuracy: {cnn_lstm_metrics['accuracy']:.4f}, F1: {cnn_lstm_metrics['f1_score']:.4f}")
+    
+    # Evaluate robust model
+    robust_metrics = evaluator.evaluate_model_comprehensive(
+        model=robust_model,
+        test_loader=data_loaders['test']
+    )
+    logger.info(f"Robust Model - Accuracy: {robust_metrics['accuracy']:.4f}, F1: {robust_metrics['f1_score']:.4f}")
+    
+    # 6. Test adversarial robustness
+    logger.info("6. Testing adversarial robustness...")
+    robustness_evaluator = RobustnessEvaluator(robust_model)
+    robustness_results = robustness_evaluator.evaluate_robustness(
+        torch.FloatTensor(X[:100]),  # Use subset for speed
+        torch.FloatTensor(y[:100])
+    )
+    logger.info(f"Robustness - Clean accuracy: {robustness_results['clean_accuracy'][0]:.4f}")
+    logger.info(f"Robustness - Adversarial accuracy: {robustness_results['adversarial_accuracy'][-1]:.4f}")
+    
+    # 7. Create and evaluate ensemble
+    logger.info("7. Creating and evaluating ensemble model...")
+    from sentinelfs_ai.training.ensemble_training import EnsembleManager
+    
+    ensemble_manager = EnsembleManager(
+        input_size=X.shape[2],
+        ensemble_size=3,
+        base_architecture='mixed',  # Use different architectures
+        hidden_size=128,
+        num_layers=3
+    )
+    
+    # Add trained models to ensemble (simplified approach)
+    ensemble_models = [lstm_model, transformer_model, cnn_lstm_model]
+    # Note: In a real scenario, we would train the ensemble properly
+    # For this example, we'll create an ensemble by averaging predictions
+    
+    # Make ensemble predictions
+    with torch.no_grad():
+        X_test = torch.FloatTensor(X[-100:])  # Use last 100 samples as test
+        y_test = torch.FloatTensor(y[-100:])
         
-        print(f"  Accuracy: {metrics['accuracy']:.4f}")
-        print(f"  Precision: {metrics['precision']:.4f}")
-        print(f"  Recall: {metrics['recall']:.4f}")
-        print(f"  F1-Score: {metrics['f1_score']:.4f}")
-        print(f"  AUC-ROC: {metrics['auc_roc']:.4f}")
-        print(f"  AUC-PR: {metrics['auc_pr']:.4f}")
-        print(f"  MCC: {metrics['mcc']:.4f}")
+        # Get predictions from each model
+        lstm_preds = lstm_model(X_test).cpu().numpy()
+        transformer_preds = transformer_model(X_test).cpu().numpy()
+        cnn_lstm_preds = cnn_lstm_model(X_test).cpu().numpy()
+        
+        # Ensemble prediction (average)
+        ensemble_preds = (lstm_preds + transformer_preds + cnn_lstm_preds) / 3
+        ensemble_accuracy = ((ensemble_preds > 0.5) == y_test.numpy()).mean()
+        
+        logger.info(f"Ensemble accuracy: {ensemble_accuracy:.4f}")
     
-    # Evaluate ensemble
-    print(f"\nEnsemble Model:")
-    ensemble_metrics = ensemble_manager.evaluate_ensemble(test_loader)
-    print(f"  Accuracy: {ensemble_metrics['accuracy']:.4f}")
-    print(f"  Precision: {ensemble_metrics['precision']:.4f}")
-    print(f"  Recall: {ensemble_metrics['recall']:.4f}")
-    print(f"  F1-Score: {ensemble_metrics['f1_score']:.4f}")
-    print(f"  Diversity: {ensemble_metrics['diversity']:.4f}")
+    # 8. Model management and versioning
+    logger.info("8. Managing models with versioning...")
+    model_manager = ModelManager(model_dir=Path('./models_comprehensive'))
     
-    # 9. Cross-validation example
-    print(f"\nCross-validation (3-fold) for LSTM model:")
+    # Save models with versioning
+    feature_extractor = data_processor.feature_extractor
+    
+    model_manager.save_model(
+        model=lstm_model,
+        version='1.0.0',
+        metrics=lstm_metrics,
+        feature_extractor=feature_extractor,
+        export_formats=['onnx', 'torchscript', 'quantized'],
+        model_name='behavioral_analyzer'
+    )
+    
+    model_manager.save_model(
+        model=robust_model,
+        version='1.1.0',
+        metrics=robust_metrics,
+        feature_extractor=feature_extractor,
+        export_formats=['onnx', 'torchscript'],
+        model_name='robust_analyzer'
+    )
+    
+    # List available models
+    available_models = model_manager.list_available_models()
+    logger.info(f"Available models: {len(available_models)}")
+    
+    # 9. Load and use model for inference
+    logger.info("9. Loading and using model for inference...")
+    loaded_model, loaded_feature_extractor = model_manager.load_model(version='1.0.0')
+    
+    # Create inference engine
+    inference_engine = InferenceEngine(
+        model=loaded_model,
+        feature_extractor=loaded_feature_extractor,
+        threshold=0.5,
+        enable_explainability=True,
+        enable_performance_monitoring=True
+    )
+    
+    # Test inference on a random sample
+    random_sample = X[np.random.randint(0, len(X))]
+    result = inference_engine.analyze(random_sample)
+    
+    logger.info(f"Inference result:")
+    logger.info(f"  - Anomaly detected: {result.anomaly_detected}")
+    logger.info(f"  - Confidence: {result.confidence:.4f}")
+    logger.info(f"  - Threat score: {result.threat_score:.2f}")
+    if result.anomaly_type:
+        logger.info(f"  - Anomaly type: {result.anomaly_type}")
+    
+    # Get detailed explanation
+    explanation = inference_engine.explain_prediction(random_sample, method='gradient')
+    logger.info(f"  - Explanation summary: {', '.join(explanation.get('summary', []))}")
+    
+    # 10. Performance monitoring
+    performance_metrics = inference_engine.get_performance_metrics()
+    logger.info(f"Performance metrics: {performance_metrics}")
+    
+    # 11. Cross-validation
+    logger.info("10. Performing cross-validation...")
     cv_results = evaluator.cross_validate(
-        BehavioralAnalyzer,
-        {'input_size': input_size, 'hidden_size': 64, 'num_layers': 3, 'dropout': 0.3},
-        X_train_norm[:500],  # Use subset for faster CV
-        y_train[:500].flatten(),
+        model_class=BehavioralAnalyzer,
+        model_params=model_config,
+        data=X[:500],  # Use subset for faster CV
+        labels=y[:500],
         n_folds=3
     )
     
-    for metric in ['accuracy', 'f1_score', 'auc_roc']:
-        values = cv_results[metric]
-        mean_val = np.mean(values)
-        std_val = np.std(values)
-        print(f"  {metric}: {mean_val:.4f} ± {std_val:.4f}")
+    avg_cv_accuracy = np.mean(cv_results['accuracy'])
+    logger.info(f"Cross-validation average accuracy: {avg_cv_accuracy:.4f}")
     
-    # 10. Stratified evaluation by anomaly type
-    print(f"\nStratified evaluation by anomaly type:")
+    # 12. Stratified evaluation
+    logger.info("11. Performing stratified evaluation...")
     stratified_results = evaluator.stratified_evaluation(
-        lstm_model,
-        test_data,
-        test_labels.flatten(),
-        test_types
+        model=loaded_model,
+        data=X,
+        labels=y,
+        anomaly_types=anomaly_types
     )
     
-    for strat, metrics in stratified_results.items():
-        print(f"  {strat}: F1-Score = {metrics['f1_score']:.4f}, AUC-ROC = {metrics['auc_roc']:.4f}")
+    for stratum, metrics in stratified_results.items():
+        logger.info(f"  {stratum}: Accuracy = {metrics['accuracy']:.4f}, F1 = {metrics['f1_score']:.4f}")
     
-    # 11. Model saving
-    print(f"\nSaving models...")
+    # 13. Feature importance and statistics
+    logger.info("12. Analyzing feature importance...")
+    feature_stats = loaded_feature_extractor.get_feature_statistics(X)
+    logger.info(f"Feature statistics: {list(feature_stats.keys())}")
     
-    # Save ensemble
-    ensemble_manager.save_ensemble(Path('./models/ensemble_model'))
-    print("✓ Ensemble model saved to ./models/ensemble_model/")
+    # 14. Advanced evaluation metrics
+    logger.info("13. Calculating advanced metrics...")
+    y_true = y.flatten()
+    with torch.no_grad():
+        y_pred_proba = lstm_model(torch.FloatTensor(X)).cpu().numpy().flatten()
     
-    # Save best individual model
-    torch.save({
-        'model_state_dict': lstm_model.state_dict(),
-        'model_config': {
-            'input_size': input_size,
-            'hidden_size': 64,
-            'num_layers': 3,
-            'dropout': 0.3,
-            'use_attention': True,
-            'bidirectional': True
+    advanced_metrics = evaluator.calculate_comprehensive_metrics(y_true, y_pred_proba)
+    logger.info(f"Advanced metrics - AUC-ROC: {advanced_metrics['auc_roc']:.4f}, "
+                f"AUC-PR: {advanced_metrics['auc_pr']:.4f}, "
+                f"Calibration error: {advanced_metrics['calibration_error']:.4f}")
+    
+    # 15. Model validation
+    logger.info("14. Validating model integrity...")
+    validation_result = model_manager.validate_model(
+        loaded_model,
+        torch.FloatTensor(X[:10]),
+        (10, 1)
+    )
+    logger.info(f"Model validation result: {validation_result}")
+    
+    logger.info("Comprehensive example completed successfully!")
+    
+    # Summary of results
+    results_summary = {
+        'timestamp': datetime.now().isoformat(),
+        'datasets': {
+            'total_samples': len(X),
+            'seq_length': X.shape[1],
+            'num_features': X.shape[2],
+            'anomaly_ratio': float(y.mean())
         },
-        'feature_extractor': feature_extractor,
-        'training_metrics': evaluator.evaluate_model_comprehensive(lstm_model, test_loader)
-    }, './models/best_individual_model.pt')
+        'model_performance': {
+            'lstm': {'accuracy': lstm_metrics['accuracy'], 'f1': lstm_metrics['f1_score']},
+            'transformer': {'accuracy': transformer_metrics['accuracy'], 'f1': transformer_metrics['f1_score']},
+            'cnn_lstm': {'accuracy': cnn_lstm_metrics['accuracy'], 'f1': cnn_lstm_metrics['f1_score']},
+            'robust': {'accuracy': robust_metrics['accuracy'], 'f1': robust_metrics['f1_score']},
+            'ensemble': {'accuracy': float(ensemble_accuracy)}
+        },
+        'robustness': {
+            'clean_accuracy': robustness_results['clean_accuracy'][0],
+            'adversarial_accuracy': robustness_results['adversarial_accuracy'][-1],
+            'epsilon': robustness_results['epsilon'][-1]
+        },
+        'cross_validation': {
+            'avg_accuracy': float(avg_cv_accuracy),
+            'std_accuracy': float(np.std(cv_results['accuracy']))
+        }
+    }
     
-    print("✓ Best individual model saved to ./models/best_individual_model.pt")
+    logger.info(f"Results summary: {json.dumps(results_summary, indent=2, default=str)}")
     
-    print(f"\n{'='*80}")
-    print("🎉 Comprehensive model improvement demonstration completed!")
-    print("="*80)
-    
-    print(f"\n💡 Key Improvements Demonstrated:")
-    print(f"  1. Realistic data generation with complex patterns")
-    print(f"  2. Multiple advanced architectures (Transformer, CNN-LSTM)")
-    print(f"  3. Adversarial training for robustness")
-    print(f"  4. Ensemble methods for improved performance")
-    print(f"  5. Comprehensive evaluation with advanced metrics")
-    print(f"  6. Cross-validation and stratified evaluation")
-    
-    print(f"\n🚀 Next Steps:")
-    print(f"  1. Train on larger, real-world datasets")
-    print(f"  2. Implement online learning for concept drift")
-    print(f"  3. Add more sophisticated adversarial techniques")
-    print(f"  4. Optimize hyperparameters with Bayesian optimization")
-    print(f"  5. Deploy with monitoring for model drift detection")
+    return results_summary
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    run_comprehensive_example()

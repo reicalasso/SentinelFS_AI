@@ -4,8 +4,9 @@ Advanced production inference engine with explainability.
 
 import torch
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
+import warnings
 
 from ..data_types import AnalysisResult, AnomalyType
 from ..data.feature_extractor import FeatureExtractor
@@ -24,6 +25,8 @@ class InferenceEngine:
     - Attention weight visualization
     - Feature importance analysis
     - Batch processing support
+    - Performance monitoring
+    - Real-time explainability
     """
     
     def __init__(
@@ -31,12 +34,22 @@ class InferenceEngine:
         model: torch.nn.Module, 
         feature_extractor: FeatureExtractor,
         threshold: float = 0.5, 
-        enable_explainability: bool = True
+        enable_explainability: bool = True,
+        enable_performance_monitoring: bool = True,
+        performance_window: int = 100
     ):
         self.model = model
         self.feature_extractor = feature_extractor
         self.threshold = threshold
         self.enable_explainability = enable_explainability
+        self.enable_performance_monitoring = enable_performance_monitoring
+        self.performance_window = performance_window
+        
+        # Performance monitoring
+        self.inference_times = []
+        self.anomaly_detection_rate = 0.0
+        self.confidence_scores = []
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -48,13 +61,14 @@ class InferenceEngine:
             'access_velocity'
         ]
     
-    def _explain_features(self, x: torch.Tensor, normalized_x: np.ndarray) -> Dict[str, Any]:
+    def _explain_features(self, x: torch.Tensor, normalized_x: np.ndarray, raw_x: np.ndarray) -> Dict[str, Any]:
         """
-        Generate feature-level explanations.
+        Generate feature-level explanations with more detailed analysis.
         
         Args:
             x: Normalized input tensor
-            normalized_x: Original normalized numpy array
+            normalized_x: Normalized numpy array
+            raw_x: Original (unnormalized) numpy array
             
         Returns:
             Dictionary with feature explanations
@@ -63,6 +77,11 @@ class InferenceEngine:
         mean_features = normalized_x[0].mean(axis=0)
         max_features = normalized_x[0].max(axis=0)
         min_features = normalized_x[0].min(axis=0)
+        std_features = normalized_x[0].std(axis=0)
+        
+        # Calculate raw feature statistics for human-readable explanations
+        raw_mean_features = raw_x[0].mean(axis=0) if raw_x is not None else mean_features
+        raw_max_features = raw_x[0].max(axis=0) if raw_x is not None else max_features
         
         # Get feature importance using gradient-based method
         was_training = self.model.training
@@ -86,8 +105,53 @@ class InferenceEngine:
         # Create explanation
         explanation = {
             'important_features': {},
-            'summary': []
+            'summary': [],
+            'anomaly_pattern': 'normal',
+            'feature_contributions': {},
+            'risk_factors': []
         }
+        
+        # Get all features' importance and analyze them
+        for idx, feature_name in enumerate(self.feature_names):
+            importance = float(feature_importance[idx])
+            mean_val = float(mean_features[idx])
+            raw_mean_val = float(raw_mean_features[idx]) if raw_x is not None else mean_val
+            std_val = float(std_features[idx])
+            
+            explanation['feature_contributions'][feature_name] = float(importance)
+            
+            # Add more specific explanations based on feature values
+            if feature_name == 'access_hour':
+                # Check for off-hours access (assuming normalized values around 0)
+                if raw_mean_val < 8 or raw_mean_val > 18:  # Non-business hours
+                    explanation['risk_factors'].append(f"Access during off-hours (avg hour: {raw_mean_val:.1f})")
+                    explanation['summary'].append(f"Off-hours access detected (hour: {raw_mean_val:.1f})")
+                elif raw_mean_val > 22 or raw_mean_val < 4:  # Very late night/early morning
+                    explanation['risk_factors'].append(f"Very late/early access (hour: {raw_mean_val:.1f})")
+                    explanation['summary'].append(f"Very unusual timing (hour: {raw_mean_val:.1f})")
+            elif feature_name == 'file_size_mb':
+                if raw_mean_val > 100:  # Large files
+                    explanation['risk_factors'].append(f"Large file access (avg: {raw_mean_val:.1f}MB)")
+                    explanation['summary'].append(f"Unusually large file sizes ({raw_mean_val:.1f}MB)")
+            elif feature_name == 'access_velocity':
+                if raw_mean_val > 10:  # High velocity
+                    explanation['risk_factors'].append(f"High access velocity ({raw_mean_val:.1f}/min)")
+                    explanation['summary'].append(f"Rapid access pattern ({raw_mean_val:.1f}/min)")
+            elif feature_name == 'access_frequency':
+                if raw_mean_val > 50:  # High frequency
+                    explanation['risk_factors'].append(f"High access frequency ({raw_mean_val:.1f}/hr)")
+                    explanation['summary'].append(f"High access frequency ({raw_mean_val:.1f}/hr)")
+        
+        # Determine anomaly pattern type
+        risk_score = len(explanation['risk_factors'])
+        if risk_score >= 3:
+            explanation['anomaly_pattern'] = 'high_risk'
+        elif risk_score == 2:
+            explanation['anomaly_pattern'] = 'moderate_risk'
+        elif risk_score == 1:
+            explanation['anomaly_pattern'] = 'low_risk'
+        else:
+            explanation['anomaly_pattern'] = 'normal'
         
         # Get top 3 most important features
         top_indices = np.argsort(feature_importance)[-3:][::-1]
@@ -100,30 +164,19 @@ class InferenceEngine:
             explanation['important_features'][feature_name] = {
                 'importance': importance,
                 'mean_value': mean_val,
+                'raw_mean_value': float(raw_mean_features[idx]),
                 'max_value': float(max_features[idx]),
-                'min_value': float(min_features[idx])
+                'min_value': float(min_features[idx]),
+                'std_value': float(std_features[idx])
             }
-            
-            # Generate human-readable summary
-            if feature_name == 'access_hour':
-                if mean_val < -0.5:  # Normalized value indicating off-hours
-                    explanation['summary'].append("Off-hours access detected")
-            elif feature_name == 'file_size_mb':
-                if mean_val > 1.0:  # Large files
-                    explanation['summary'].append("Unusually large file sizes")
-            elif feature_name == 'access_velocity':
-                if mean_val > 1.5:  # High velocity
-                    explanation['summary'].append("Rapid access pattern detected")
-            elif feature_name == 'access_frequency':
-                if mean_val > 1.5:  # High frequency
-                    explanation['summary'].append("High access frequency")
         
         return explanation
     
     def analyze(
         self, 
         access_sequence: np.ndarray, 
-        return_attention: bool = None
+        return_attention: bool = None,
+        include_raw_features: bool = True
     ) -> AnalysisResult:
         """
         Analyze a sequence of file access events with advanced features.
@@ -131,17 +184,25 @@ class InferenceEngine:
         Args:
             access_sequence: Numpy array of shape (seq_len, num_features)
             return_attention: Whether to return attention weights (None = auto-detect)
+            include_raw_features: Whether to include raw features in explanations
             
         Returns:
             AnalysisResult with comprehensive analysis
         """
+        import time
+        
         if return_attention is None:
             return_attention = self.enable_explainability
+        
+        start_time = time.time()
         
         with torch.no_grad():
             # Normalize features
             if len(access_sequence.shape) == 2:
                 access_sequence = access_sequence.reshape(1, *access_sequence.shape)
+            
+            # Store raw features for explanations
+            raw_features = access_sequence.copy() if include_raw_features else None
             
             normalized = self.feature_extractor.transform(access_sequence)
             x = torch.FloatTensor(normalized).to(self.device)
@@ -172,8 +233,24 @@ class InferenceEngine:
             
             # Generate explanation if enabled and anomaly detected
             explanation = None
-            if self.enable_explainability and anomaly_detected:
-                explanation = self._explain_features(x, normalized)
+            if self.enable_explainability:
+                explanation = self._explain_features(x, normalized, raw_features)
+            
+            # Performance monitoring
+            if self.enable_performance_monitoring:
+                inference_time = time.time() - start_time
+                self.inference_times.append(inference_time)
+                if len(self.inference_times) > self.performance_window:
+                    self.inference_times.pop(0)
+                
+                self.confidence_scores.append(score)
+                if len(self.confidence_scores) > self.performance_window:
+                    self.confidence_scores.pop(0)
+                
+                # Update anomaly detection rate
+                recent_predictions = self.confidence_scores[-self.performance_window:]
+                if recent_predictions:
+                    self.anomaly_detection_rate = np.mean([1 if pred >= self.threshold else 0 for pred in recent_predictions])
             
             return AnalysisResult(
                 access_pattern_score=score,
@@ -191,7 +268,8 @@ class InferenceEngine:
     def batch_analyze(
         self, 
         sequences: List[np.ndarray], 
-        parallel: bool = True
+        parallel: bool = True,
+        batch_size: int = 32
     ) -> List[AnalysisResult]:
         """
         Analyze multiple sequences in batch with optional parallelization.
@@ -199,6 +277,7 @@ class InferenceEngine:
         Args:
             sequences: List of access sequences
             parallel: Whether to process in parallel (faster for large batches)
+            batch_size: Size of processing batches
             
         Returns:
             List of AnalysisResult objects
@@ -206,51 +285,24 @@ class InferenceEngine:
         if not parallel or len(sequences) < 4:
             # Sequential processing for small batches
             results = []
-            with torch.no_grad():
-                for seq in sequences:
-                    result = self.analyze(seq)
-                    results.append(result)
+            for seq in sequences:
+                result = self.analyze(seq)
+                results.append(result)
             return results
         
-        # Parallel batch processing
+        # Batch processing
         results = []
-        batch_size = 32
         
-        with torch.no_grad():
-            for i in range(0, len(sequences), batch_size):
-                batch = sequences[i:i + batch_size]
-                
-                # Ensure all sequences have same shape
-                max_len = max(seq.shape[0] for seq in batch)
-                padded_batch = []
-                
-                for seq in batch:
-                    if len(seq.shape) == 2:
-                        seq = seq.reshape(1, *seq.shape)
-                    normalized = self.feature_extractor.transform(seq)
-                    padded_batch.append(normalized[0])
-                
-                # Stack into batch tensor
-                batch_tensor = torch.FloatTensor(np.array(padded_batch)).to(self.device)
-                
-                # Process batch
-                outputs = self.model(batch_tensor)
-                
-                # Create results
-                for j, output in enumerate(outputs):
-                    score = output.item()
-                    confidence = abs(score - self.threshold) / 0.5
-                    confidence = min(confidence, 1.0)
-                    anomaly_detected = score >= self.threshold
-                    
-                    results.append(AnalysisResult(
-                        access_pattern_score=score,
-                        behavior_normal=not anomaly_detected,
-                        anomaly_detected=anomaly_detected,
-                        confidence=confidence,
-                        last_updated=datetime.now().isoformat(),
-                        threat_score=score * 100
-                    ))
+        for i in range(0, len(sequences), batch_size):
+            batch = sequences[i:i + batch_size]
+            
+            # Process batch
+            batch_results = []
+            for seq in batch:
+                result = self.analyze(seq)
+                batch_results.append(result)
+            
+            results.extend(batch_results)
         
         return results
     
@@ -268,3 +320,124 @@ class InferenceEngine:
         if result.attention_weights:
             return np.array(result.attention_weights)
         return None
+    
+    def get_performance_metrics(self) -> Dict[str, float]:
+        """
+        Get performance metrics for the inference engine.
+        
+        Returns:
+            Dictionary with performance metrics
+        """
+        if not self.inference_times:
+            return {
+                'avg_inference_time_ms': 0.0,
+                'min_inference_time_ms': 0.0,
+                'max_inference_time_ms': 0.0,
+                'std_inference_time_ms': 0.0,
+                'anomaly_detection_rate': 0.0,
+                'samples_processed': 0
+            }
+        
+        inference_times_ms = [t * 1000 for t in self.inference_times]
+        return {
+            'avg_inference_time_ms': float(np.mean(inference_times_ms)),
+            'min_inference_time_ms': float(np.min(inference_times_ms)),
+            'max_inference_time_ms': float(np.max(inference_times_ms)),
+            'std_inference_time_ms': float(np.std(inference_times_ms)),
+            'anomaly_detection_rate': self.anomaly_detection_rate,
+            'samples_processed': len(self.confidence_scores)
+        }
+    
+    def reset_performance_monitoring(self):
+        """Reset all performance monitoring statistics."""
+        self.inference_times = []
+        self.anomaly_detection_rate = 0.0
+        self.confidence_scores = []
+    
+    def explain_prediction(
+        self,
+        access_sequence: np.ndarray,
+        method: str = 'gradient'  # 'gradient', 'integrated', 'attention'
+    ) -> Dict[str, Any]:
+        """
+        Generate a detailed explanation for a prediction using various methods.
+        
+        Args:
+            access_sequence: Access sequence to explain
+            method: Explanation method to use
+            
+        Returns:
+            Dictionary with detailed explanation
+        """
+        if method == 'gradient':
+            return self._explain_features(
+                torch.FloatTensor(self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape))).to(self.device),
+                self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape)),
+                access_sequence
+            )
+        elif method == 'attention' and hasattr(self.model, 'use_attention') and self.model.use_attention:
+            # Get attention-based explanation
+            with torch.no_grad():
+                x = torch.FloatTensor(self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape))).to(self.device)
+                _, attention_weights = self.model(x, return_attention=True)
+                
+                # Analyze which time steps were most attended to
+                attention_weights_np = attention_weights.cpu().numpy()
+                top_attention_idx = np.argmax(attention_weights_np)
+                top_attention_value = attention_weights_np[top_attention_idx]
+                
+                return {
+                    'method': 'attention',
+                    'most_important_timestep': int(top_attention_idx),
+                    'attention_weight': float(top_attention_value),
+                    'attention_distribution': attention_weights_np.tolist(),
+                    'explanation': f"Model focused most on timestep {top_attention_idx} (weight: {top_attention_value:.3f})"
+                }
+        else:
+            # Fallback to gradient method
+            return self._explain_features(
+                torch.FloatTensor(self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape))).to(self.device),
+                self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape)),
+                access_sequence
+            )
+    
+    def predict_anomaly_type_detailed(self, access_sequence: np.ndarray) -> Dict[str, Any]:
+        """
+        Get detailed anomaly type prediction with confidence breakdown.
+        
+        Args:
+            access_sequence: Access sequence to analyze
+            
+        Returns:
+            Dictionary with detailed anomaly type predictions
+        """
+        with torch.no_grad():
+            x = torch.FloatTensor(self.feature_extractor.transform(access_sequence.reshape(1, *access_sequence.shape))).to(self.device)
+            
+            if hasattr(self.model, 'predict_anomaly_type'):
+                type_probs = self.model.predict_anomaly_type(x)
+                type_probs_np = type_probs.cpu().numpy()[0]
+                
+                # Get all anomaly type probabilities
+                anomaly_type_probs = {
+                    AnomalyType.get_name(i): float(prob) 
+                    for i, prob in enumerate(type_probs_np)
+                }
+                
+                predicted_type_id = int(np.argmax(type_probs_np))
+                predicted_type_name = AnomalyType.get_name(predicted_type_id)
+                confidence = float(np.max(type_probs_np))
+                
+                return {
+                    'predicted_type': predicted_type_name,
+                    'confidence': confidence,
+                    'all_probabilities': anomaly_type_probs,
+                    'type_id': predicted_type_id
+                }
+            else:
+                return {
+                    'predicted_type': None,
+                    'confidence': 0.0,
+                    'all_probabilities': {},
+                    'type_id': None
+                }

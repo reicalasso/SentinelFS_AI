@@ -117,16 +117,35 @@ logs/
 *.log
 
 # Packed models, checkpoints, and results (project-specific)
+# Keep curated baseline artifacts but ignore run-time outputs
 checkpoints/
-checkpoints/*
 models/
-models/*
-results/
-results/*
+models_simplified/
+models/behavioral_analyzer_production.pt
+models/training_*.pt
+models/**/*.pth
+models/**/*.ckpt
+results/training_summary.json
+results/metrics_*.json
+results/*.csv
+checkpoints/checkpoint_*.pt
+checkpoints/temp/
+# Allow committed reference assets
+!models/ensemble_model/
+!models/ensemble_model/**
+!models/best_individual_model.pt
+!checkpoints/adv_checkpoint_epoch_10.pt
 
 # Large data directories that may be generated
 data/*.bin
 data/*.npz
+data/cache/
+
+# Experiment tracking outputs
+wandb/
+lightning_logs/
+runs/
+tb_logs/
 
 # Local development overrides
 *.local
@@ -140,3 +159,6 @@ keys/
 # Temporary files
 *.tmp
 *.swp
+
+
+dataset_output/

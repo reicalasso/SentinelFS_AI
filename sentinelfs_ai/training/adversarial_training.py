@@ -165,10 +165,19 @@ def adversarial_training_step(
     # Forward pass
     optimizer.zero_grad()
     outputs = model(combined_data)
+    
+    # Apply sigmoid if using BCE to avoid log(0) issues
+    if isinstance(criterion, nn.BCELoss):
+        outputs = torch.clamp(outputs, 1e-7, 1 - 1e-7)
+    
     loss = criterion(outputs, combined_labels)
     
     # Backward pass
     loss.backward()
+    
+    # Gradient clipping for stability
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    
     optimizer.step()
     
     # Calculate accuracy
