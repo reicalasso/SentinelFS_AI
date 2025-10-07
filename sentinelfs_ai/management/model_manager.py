@@ -11,15 +11,13 @@ import pickle
 from datetime import datetime
 import os
 import shutil
+import numpy as np
 from packaging import version as pkg_version
 
 from ..models.behavioral_analyzer import BehavioralAnalyzer
-from ..models.advanced_models import (
-    TransformerBehavioralAnalyzer, 
-    CNNLSTMAnalyzer, 
-    EnsembleAnalyzer
-)
+from ..models.hybrid_detector import HybridThreatDetector, LightweightThreatDetector
 from ..data.feature_extractor import FeatureExtractor
+from ..data.real_feature_extractor import RealFeatureExtractor
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -52,9 +50,8 @@ class ModelManager:
         # Model architecture mapping
         self.architecture_map = {
             'BehavioralAnalyzer': BehavioralAnalyzer,
-            'TransformerBehavioralAnalyzer': TransformerBehavioralAnalyzer,
-            'CNNLSTMAnalyzer': CNNLSTMAnalyzer,
-            'EnsembleAnalyzer': EnsembleAnalyzer
+            'HybridThreatDetector': HybridThreatDetector,
+            'LightweightThreatDetector': LightweightThreatDetector
         }
     
     def save_model(
