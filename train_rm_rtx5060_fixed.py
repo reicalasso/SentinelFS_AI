@@ -715,8 +715,12 @@ class SentinelFSAISystemFixed:
         # Get validation predictions
         val_scores = self._get_model_scores(val_events, hp['sequence_length'])
         
+        # Align labels with sequences (use label of last event in each sequence)
+        num_sequences = len(val_scores)
+        aligned_val_labels = val_labels[-num_sequences:]  # Use last labels
+        
         calibration_results = self.threshold_calibrator.calibrate_threshold(
-            y_true=val_labels,
+            y_true=aligned_val_labels,
             y_scores=val_scores,
             target_metric='f1',
             min_recall=0.85  # Critical: must catch at least 85% of threats
@@ -730,19 +734,50 @@ class SentinelFSAISystemFixed:
         
         return training_results
     
+    def _prepare_sequences(
+        self, 
+        events: list, 
+        sequence_length: int
+    ) -> np.ndarray:
+        """
+        Convert events into sequences of features.
+        
+        Args:
+            events: List of event dictionaries
+            sequence_length: Length of each sequence
+            
+        Returns:
+            Array of shape (num_sequences, sequence_length, num_features)
+        """
+        # Extract features for each event
+        all_features = []
+        for event in events:
+            features = self.feature_extractor.extract_from_event(event)
+            all_features.append(features)
+        
+        all_features = np.array(all_features)
+        
+        # Create sequences
+        sequences = []
+        for i in range(len(all_features) - sequence_length + 1):
+            sequence = all_features[i:i + sequence_length]
+            sequences.append(sequence)
+        
+        return np.array(sequences, dtype=np.float32)
+    
     def _get_model_scores(self, events: list, sequence_length: int) -> np.ndarray:
         """Get raw model scores for events."""
         self.model.eval()
         device = next(self.model.parameters()).device
         
-        # Extract features
-        features = self.feature_extractor.extract_from_sequence(events)
+        # Prepare sequences like in training
+        sequences = self._prepare_sequences(events, sequence_length)
         
         scores = []
         with torch.no_grad():
-            for i in range(0, len(features), 32):  # Batch processing
-                batch = features[i:i+32]
-                batch_tensor = torch.FloatTensor(batch).unsqueeze(1).to(device)  # Add sequence dimension
+            for i in range(0, len(sequences), 32):  # Batch processing
+                batch = sequences[i:i+32]
+                batch_tensor = torch.FloatTensor(batch).to(device)
                 batch_scores, _ = self.model(batch_tensor, return_components=False)
                 scores.extend(batch_scores.cpu().numpy().flatten())
         
