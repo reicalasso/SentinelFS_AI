@@ -1,17 +1,25 @@
 # SentinelFS AI – Production Threat Detection System
 
-**Version 3.1.0** - Real-time AI-powered threat detection for distributed file systems.
+**Version 3.2.0** - Real-time AI-powered threat detection for distributed file systems.
 
-This repository contains a production-ready hybrid threat detection system combining neural networks, anomaly detection, and heuristic analysis. The system is designed for real-world deployment with <1ms inference latency and >95% accuracy.
+This repository contains a production-ready hybrid threat detection system combining neural networks, anomaly detection, and heuristic analysis. The system is designed for real-world deployment with <1ms inference latency, REST API access, and >95% accuracy.
 
-## 🎉 Phase 1.1 Complete: Real-Time Stream Processing
+## 🎉 Latest: Phase 1.2 Complete - REST API Framework
 
-✅ **NEW**: Real-time event stream processing with sub-millisecond latency  
-✅ **NEW**: Thread-safe sliding window buffer for continuous monitoring  
-✅ **NEW**: GPU-accelerated streaming inference (1,197 events/sec)  
-✅ **NEW**: Concurrent multi-stream support  
+✅ **NEW**: Production-ready REST API with FastAPI  
+✅ **NEW**: Interactive Swagger UI documentation  
+✅ **NEW**: API key authentication and security  
+✅ **NEW**: Batch and real-time prediction endpoints  
+✅ **NEW**: Performance monitoring and metrics API  
 
-See [PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md) for complete details.
+### Phase 1.1: Real-Time Stream Processing ✅
+
+✅ Real-time event stream processing with sub-millisecond latency  
+✅ Thread-safe sliding window buffer for continuous monitoring  
+✅ GPU-accelerated streaming inference (1,197 events/sec)  
+✅ Concurrent multi-stream support  
+
+See [PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md) and [PHASE_1_2_SUMMARY.md](PHASE_1_2_SUMMARY.md) for complete details.
 
 ## ✨ What's Included
 
