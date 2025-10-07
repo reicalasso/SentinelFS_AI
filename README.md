@@ -1,4 +1,4 @@
-# SentinelFS AI – Production Threat Detection System
+# SentinelZer0 – Production Threat Detection System
 
 **Version 3.2.0** - Real-time AI-powered threat detection for distributed file systems.
 
@@ -24,7 +24,7 @@ See [PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md) and [PHASE_1_2_SUMMARY.md](PHAS
 ## ✨ What's Included
 
 ### Core Components
-- **`sentinelfs_ai/`**: Complete Python package with production models
+- **`sentinelzer0/`**: Complete Python package with production models
   - `models/`: HybridThreatDetector (GRU + Isolation Forest + Heuristics)
   - `data/`: RealFeatureExtractor (30 real-world features)
   - `training/`: RealWorldTrainer with incremental learning
@@ -75,7 +75,7 @@ This demonstrates the complete workflow:
 ### Production Usage
 
 ```python
-from sentinelfs_ai import (
+from sentinelzer0 import (
     HybridThreatDetector,
     RealFeatureExtractor,
     RealTimeInferenceEngine,
@@ -138,7 +138,7 @@ if threat_score > 0.5276:
 
 ## 📚 Documentation
 
-- **[sentinelfs_ai/README.md](sentinelfs_ai/README.md)** - Package API reference and usage guide
+- **[sentinelzer0/README.md](sentinelzer0/README.md)** - Package API reference and usage guide
 - **[MODEL_COMPARISON.md](MODEL_COMPARISON.md)** - Architecture comparison and design decisions
 - **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - Recent cleanup and migration guide
 - **[CRITICAL_FIX_DOCUMENTATION.md](CRITICAL_FIX_DOCUMENTATION.md)** - Critical fixes and improvements

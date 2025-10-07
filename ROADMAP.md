@@ -1,10 +1,10 @@
-# 🧠 SentinelFS AI - Development Roadmap
+# 🧠 SentinelZer0 - Development Roadmap
 
 **Version**: 1.0.0 | **Date**: October 8, 2025 | **Status**: Active
 
 ## 📋 Executive Summary
 
-This roadmap outlines the development plan to transform the current research-grade AI model into a production-ready threat detection system for SentinelFS. The current model achieves excellent performance (ROC AUC 0.9963, F1 0.9869) but lacks critical production features.
+This roadmap outlines the development plan to transform the current research-grade AI model into a production-ready threat detection system for SentinelZer0. The current model achieves excellent performance (ROC AUC 0.9963, F1 0.9869) but lacks critical production features.
 
 ---
 

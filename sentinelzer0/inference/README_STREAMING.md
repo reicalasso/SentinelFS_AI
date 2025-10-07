@@ -5,8 +5,8 @@ This module provides real-time inference capabilities for continuous file system
 ## Quick Start
 
 ```python
-from sentinelfs_ai.models.hybrid_detector import HybridThreatDetector
-from sentinelfs_ai.inference.streaming_engine import StreamingInferenceEngine
+from sentinelzer0.models.hybrid_detector import HybridThreatDetector
+from sentinelzer0.inference.streaming_engine import StreamingInferenceEngine
 
 # Load trained model
 model = HybridThreatDetector(input_size=30)

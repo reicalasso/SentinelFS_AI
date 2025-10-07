@@ -32,7 +32,7 @@ echo "=========================================="
 echo ""
 
 # Start server
-uvicorn sentinelfs_ai.api.server:app \
+uvicorn sentinelzer0.api.server:app \
     --host 0.0.0.0 \
     --port 8000 \
     --reload \

@@ -16,12 +16,12 @@ pip install -r requirements.txt
 
 **Option B: Using uvicorn directly**
 ```bash
-uvicorn sentinelfs_ai.api.server:app --reload --port 8000
+uvicorn sentinelzer0.api.server:app --reload --port 8000
 ```
 
 **Option C: Using Python**
 ```bash
-python -m sentinelfs_ai.api.server
+python -m sentinelzer0.api.server
 ```
 
 The server will start at: `http://localhost:8000`
@@ -300,7 +300,7 @@ export SENTINELFS_API_KEY="your-secure-key-here"
 export SENTINELFS_CORS_ORIGINS="https://yourdomain.com"
 
 # Start with production settings
-uvicorn sentinelfs_ai.api.server:app \
+uvicorn sentinelzer0.api.server:app \
   --host 0.0.0.0 \
   --port 443 \
   --ssl-keyfile=/path/to/key.pem \
@@ -319,7 +319,7 @@ uvicorn sentinelfs_ai.api.server:app \
 lsof -i :8000
 
 # Use a different port
-uvicorn sentinelfs_ai.api.server:app --port 8001
+uvicorn sentinelzer0.api.server:app --port 8001
 ```
 
 ### 401 Unauthorized

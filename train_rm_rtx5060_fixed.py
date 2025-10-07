@@ -28,12 +28,12 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 
 # Enhanced imports
-from sentinelfs_ai.models.hybrid_detector import HybridThreatDetector
-from sentinelfs_ai.data.real_feature_extractor import RealFeatureExtractor
-from sentinelfs_ai.training.real_trainer import RealWorldTrainer
-from sentinelfs_ai.inference.real_engine import RealTimeInferenceEngine
-from sentinelfs_ai.evaluation.production_evaluator import ProductionEvaluator
-from sentinelfs_ai.utils.logger import get_logger
+from sentinelzer0.models.hybrid_detector import HybridThreatDetector
+from sentinelzer0.data.real_feature_extractor import RealFeatureExtractor
+from sentinelzer0.training.real_trainer import RealWorldTrainer
+from sentinelzer0.inference.real_engine import RealTimeInferenceEngine
+from sentinelzer0.evaluation.production_evaluator import ProductionEvaluator
+from sentinelzer0.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -569,8 +569,8 @@ def simulate_enhanced_real_file_events(
     return list(events), labels_array
 
 
-class SentinelFSAISystemFixed:
-    """Fixed SentinelFS AI System with comprehensive diagnostics."""
+class SentinelZer0SystemFixed:
+    """Fixed SentinelZer0 System with comprehensive diagnostics."""
     
     def __init__(
         self,
@@ -606,7 +606,7 @@ class SentinelFSAISystemFixed:
         
         self.optimal_threshold = 0.45  # Will be calibrated
         
-        logger.info("Fixed SentinelFS AI System initialized with comprehensive diagnostics")
+        logger.info("Fixed SentinelZer0 System initialized with comprehensive diagnostics")
     
     def train_with_diagnostics(
         self,
@@ -941,11 +941,11 @@ def main():
     """Main execution with comprehensive fixes."""
     
     print("\n" + "="*80)
-    print("SENTINELFS AI - CRITICAL FIX: COMPREHENSIVE DIAGNOSTICS & CALIBRATION")
+    print("SENTINELZER0 - CRITICAL FIX: COMPREHENSIVE DIAGNOSTICS & CALIBRATION")
     print("="*80 + "\n")
     
     # Initialize fixed system
-    system = SentinelFSAISystemFixed()
+    system = SentinelZer0SystemFixed()
     
     # Step 1: Generate enhanced realistic data
     print("Step 1: Generating enhanced realistic file system events...")

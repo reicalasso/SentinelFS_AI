@@ -1,4 +1,4 @@
-# 🛡️ SentinelFS AI - Production Threat Detection Package
+# 🛡️ SentinelZer0 - Production Threat Detection Package
 
 **Real-time AI-powered behavioral analysis for distributed file system security**
 
@@ -9,7 +9,7 @@
 
 ## 🎯 Overview
 
-SentinelFS AI is a production-ready hybrid threat detection system that combines deep learning, anomaly detection, and heuristic rules for real-time file system security monitoring. The system achieves exceptional accuracy with sub-25ms inference latency.
+SentinelZer0 is a production-ready hybrid threat detection system that combines deep learning, anomaly detection, and heuristic rules for real-time file system security monitoring. The system achieves exceptional accuracy with sub-25ms inference latency.
 
 ### ✨ Key Features
 
@@ -66,7 +66,7 @@ SentinelFS AI is a production-ready hybrid threat detection system that combines
 ### Basic Usage
 
 ```python
-from sentinelfs_ai import HybridThreatDetector, RealFeatureExtractor
+from sentinelzer0 import HybridThreatDetector, RealFeatureExtractor
 
 # Initialize components
 feature_extractor = RealFeatureExtractor()
@@ -92,7 +92,7 @@ threat_score = model(features)
 ### Production Inference Engine
 
 ```python
-from sentinelfs_ai import RealTimeInferenceEngine
+from sentinelzer0 import RealTimeInferenceEngine
 
 # Create production inference engine
 engine = RealTimeInferenceEngine(
@@ -111,7 +111,7 @@ if threat_score > 0.5276:
 ### Training Pipeline
 
 ```python
-from sentinelfs_ai import RealWorldTrainer
+from sentinelzer0 import RealWorldTrainer
 
 # Initialize trainer
 trainer = RealWorldTrainer(
@@ -274,7 +274,9 @@ inference_config = {
 ## 📁 Package Structure
 
 ```
-sentinelfs_ai/
+```
+
+sentinelzer0/
 ├── __init__.py              # Package initialization
 ├── data_types.py            # Core data structures
 ├── data/                    # Data processing modules
@@ -321,7 +323,7 @@ This is part of the **YMH345 - Computer Networks** course project at Sakarya Uni
 ```bash
 # Clone repository
 git clone <repository-url>
-cd sentinelfs_ai
+cd sentinelzer0
 
 # Install dependencies
 pip install -r ../requirements.txt
@@ -368,7 +370,7 @@ pip install -r requirements.txt
 pip install torch scikit-learn numpy matplotlib seaborn
 
 # 4. Verify installation
-python -c "from sentinelfs_ai import BehavioralAnalyzer; print('✓ Ready!')"
+python -c "from sentinelzer0 import BehavioralAnalyzer; print('✓ Ready!')"
 ```
 
 ### Training
@@ -399,7 +401,7 @@ python train_production_model.py \
 ```python
 import torch
 import numpy as np
-from sentinelfs_ai import InferenceEngine, BehavioralAnalyzer, ModelManager
+from sentinelzer0 import InferenceEngine, BehavioralAnalyzer, ModelManager
 
 # Load trained model using ModelManager
 model_manager = ModelManager()
@@ -443,7 +445,7 @@ for i, result in enumerate(results):
 
 #### Ensemble Model Usage
 ```python
-from sentinelfs_ai import EnsembleManager
+from sentinelzer0 import EnsembleManager
 
 # Create ensemble with different architectures
 ensemble_manager = EnsembleManager(
@@ -478,7 +480,7 @@ features = [
 
 ### Training Configuration
 ```python
-from sentinelfs_ai import TrainingConfig
+from sentinelzer0 import TrainingConfig
 
 config = TrainingConfig(
     num_samples=5000,        # Total training samples
@@ -530,7 +532,7 @@ advanced_config = {
 
 ### Adversarial Training
 ```python
-from sentinelfs_ai import AdversarialTrainer, RobustnessEvaluator
+from sentinelzer0 import AdversarialTrainer, RobustnessEvaluator
 
 # Create adversarial trainer
 adv_trainer = AdversarialTrainer(
@@ -550,7 +552,7 @@ robustness_results = evaluator.evaluate_robustness(test_data, test_labels)
 
 ### Multi-Model Ensemble
 ```python
-from sentinelfs_ai import EnsembleManager
+from sentinelzer0 import EnsembleManager
 
 # Create diverse ensemble
 ensemble_mgr = EnsembleManager(
@@ -573,7 +575,7 @@ print(f"Model Diversity: {ensemble_metrics['diversity']:.4f}")
 
 ### Advanced Evaluation
 ```python
-from sentinelfs_ai import AdvancedEvaluator
+from sentinelzer0 import AdvancedEvaluator
 
 evaluator = AdvancedEvaluator()
 
@@ -654,7 +656,7 @@ python -m pytest test_ai_module.py::test_adversarial -v
 ## 📁 Package Structure
 
 ```
-sentinelfs_ai/
+sentinelzer0/
 ├── __init__.py              # Package initialization
 ├── data_types.py            # Core data structures
 ├── README.md                # This documentation

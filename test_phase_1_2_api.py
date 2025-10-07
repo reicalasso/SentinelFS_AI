@@ -14,7 +14,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 import requests
-from sentinelfs_ai.utils.logger import get_logger
+from sentinelzer0.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -360,8 +360,8 @@ def main():
     logger.info("╚" + "═" * 78 + "╝\n")
     
     logger.info("⚠️  NOTE: Make sure the API server is running!")
-    logger.info("   Start with: python -m sentinelfs_ai.api.server")
-    logger.info("   Or: uvicorn sentinelfs_ai.api.server:app --reload\n")
+    logger.info("   Start with: python -m sentinelzer0.api.server")
+    logger.info("   Or: uvicorn sentinelzer0.api.server:app --reload\n")
     
     # Wait for user confirmation
     input("Press Enter when the server is ready...")

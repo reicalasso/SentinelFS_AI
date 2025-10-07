@@ -17,14 +17,14 @@ sys.path.insert(0, str(project_root))
 
 import numpy as np
 import torch
-from sentinelfs_ai.models.hybrid_detector import HybridThreatDetector
-from sentinelfs_ai.inference.streaming_engine import (
+from sentinelzer0.models.hybrid_detector import HybridThreatDetector
+from sentinelzer0.inference.streaming_engine import (
     StreamingInferenceEngine,
     StreamBuffer,
     ThreatPrediction
 )
-from sentinelfs_ai.data.real_feature_extractor import RealFeatureExtractor
-from sentinelfs_ai.utils.logger import get_logger
+from sentinelzer0.data.real_feature_extractor import RealFeatureExtractor
+from sentinelzer0.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

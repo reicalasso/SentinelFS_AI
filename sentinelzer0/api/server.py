@@ -1,5 +1,5 @@
 """
-SentinelFS AI REST API Server
+SentinelZer0 REST API Server
 
 FastAPI application providing real-time threat detection endpoints.
 
@@ -85,7 +85,7 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
-    logger.info("Starting SentinelFS AI API...")
+    logger.info("Starting SentinelZer0 API...")
     
     try:
         # Load model
@@ -162,7 +162,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down SentinelFS AI API...")
+    logger.info("Shutting down SentinelZer0 API...")
     if app_state.engine:
         app_state.engine.clear_buffer()
     logger.info("✓ Shutdown complete")
@@ -170,7 +170,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="SentinelFS AI API",
+    title="SentinelZer0 API",
     description="""
     Real-time threat detection API for file system monitoring.
     
@@ -241,7 +241,7 @@ async def global_exception_handler(request, exc):
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "SentinelFS AI API",
+        "name": "SentinelZer0 API",
         "version": app_state.api_version,
         "status": "operational",
         "documentation": "/docs",
@@ -496,7 +496,7 @@ if __name__ == "__main__":
     import uvicorn
     
     uvicorn.run(
-        "sentinelfs_ai.api.server:app",
+        "sentinelzer0.api.server:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

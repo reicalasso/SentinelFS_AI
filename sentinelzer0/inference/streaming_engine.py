@@ -1,5 +1,5 @@
 """
-Real-time stream processing for SentinelFS AI.
+Real-time stream processing for SentinelZer0.
 
 This module implements sliding window buffers and streaming inference
 to enable continuous file system event analysis with <25ms latency.

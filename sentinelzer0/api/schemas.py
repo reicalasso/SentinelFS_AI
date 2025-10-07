@@ -1,5 +1,5 @@
 """
-REST API schemas and data models for SentinelFS AI.
+REST API schemas and data models for SentinelZer0.
 
 This module defines Pydantic models for request/response validation
 and API documentation.

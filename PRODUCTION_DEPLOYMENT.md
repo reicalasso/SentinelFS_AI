@@ -1,4 +1,4 @@
-# SentinelFS AI - Production Deployment Guide
+# SentinelZer0 - Production Deployment Guide
 
 ## 🚀 Production-Ready Configuration
 
@@ -63,7 +63,7 @@ Create `/etc/systemd/system/sentinelfs-ai.service`:
 
 ```ini
 [Unit]
-Description=SentinelFS AI API Server
+Description=SentinelZer0 API Server
 After=network.target
 
 [Service]
@@ -74,7 +74,7 @@ WorkingDirectory=/opt/sentinelfs-ai
 Environment="PATH=/opt/sentinelfs-ai/.venv/bin"
 EnvironmentFile=/opt/sentinelfs-ai/.env
 ExecStart=/opt/sentinelfs-ai/.venv/bin/uvicorn \
-    sentinelfs_ai.api.server:app \
+    sentinelzer0.api.server:app \
     --host ${SENTINELFS_HOST:-0.0.0.0} \
     --port ${SENTINELFS_PORT:-8000} \
     --workers ${SENTINELFS_WORKERS:-4} \
@@ -124,7 +124,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run application
-CMD ["uvicorn", "sentinelfs_ai.api.server:app", \
+CMD ["uvicorn", "sentinelzer0.api.server:app", \
      "--host", "0.0.0.0", \
      "--port", "8000", \
      "--workers", "4"]
@@ -354,7 +354,7 @@ handlers=console
 [logger_sentinelfs]
 level=INFO
 handlers=file,syslog
-qualname=sentinelfs_ai
+qualname=sentinelzer0
 propagate=0
 
 [handler_console]

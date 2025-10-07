@@ -199,9 +199,9 @@ docker-compose up -d
 ## 📁 Files Summary
 
 ### Core API Files
-- `sentinelfs_ai/api/__init__.py` - Package exports
-- `sentinelfs_ai/api/schemas.py` - Pydantic models (Pydantic V2 compatible)
-- `sentinelfs_ai/api/server.py` - FastAPI server (production-ready)
+- `sentinelzer0/api/__init__.py` - Package exports
+- `sentinelzer0/api/schemas.py` - Pydantic models (Pydantic V2 compatible)
+- `sentinelzer0/api/server.py` - FastAPI server (production-ready)
 
 ### Documentation
 - `API_QUICKSTART.md` - Quick start guide
@@ -238,7 +238,7 @@ EOF
 pip install -r requirements.txt
 
 # Test configuration
-python -c "from sentinelfs_ai.api.server import app; print('✓ Config OK')"
+python -c "from sentinelzer0.api.server import app; print('✓ Config OK')"
 ```
 
 ### 3. Deploy
