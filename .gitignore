@@ -120,11 +120,10 @@ logs/
 # Keep curated baseline artifacts but ignore run-time outputs
 checkpoints/
 models/
-models_simplified/
-models/behavioral_analyzer_production.pt
 models/training_*.pt
 models/**/*.pth
 models/**/*.ckpt
+results/
 results/training_summary.json
 results/metrics_*.json
 results/*.csv
@@ -134,7 +133,7 @@ checkpoints/temp/
 !models/ensemble_model/
 !models/ensemble_model/**
 !models/best_individual_model.pt
-!checkpoints/adv_checkpoint_epoch_10.pt
+!models/behavioral_analyzer_production.pt
 
 # Large data directories that may be generated
 data/*.bin
