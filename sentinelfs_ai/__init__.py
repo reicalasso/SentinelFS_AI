@@ -24,34 +24,19 @@ from .data_types import (
 )
 
 # Neural network models
-from .models.behavioral_analyzer import BehavioralAnalyzer
-from .models.attention import AttentionLayer
-from .models.hybrid_detector import (
-    HybridThreatDetector,
-    LightweightThreatDetector
-)
+from .models.hybrid_detector import HybridThreatDetector
 
 # Data processing and feature extraction
-from .data.feature_extractor import FeatureExtractor
 from .data.real_feature_extractor import RealFeatureExtractor
-from .data.data_processor import DataProcessor
 
 # Training functionality
-from .training.trainer import train_model
 from .training.real_trainer import RealWorldTrainer
-from .training.metrics import calculate_metrics, evaluate_model
-from .training.early_stopping import EarlyStopping
 
 # Evaluation
 from .evaluation.production_evaluator import ProductionEvaluator
 
 # Inference engines
-from .inference.engine import InferenceEngine
 from .inference.real_engine import RealTimeInferenceEngine
-
-# Model management
-from .management.model_manager import ModelManager
-from .management.checkpoint import save_checkpoint, load_checkpoint
 
 # Utilities
 from .utils.logger import get_logger
@@ -88,11 +73,6 @@ __all__ = [
     # Inference Engines
     'InferenceEngine',              # Legacy inference engine
     'RealTimeInferenceEngine',      # Production real-time inference (<25ms)
-    
-    # Model Management
-    'ModelManager',                 # Model lifecycle management
-    'save_checkpoint',              # Save model checkpoint
-    'load_checkpoint',              # Load model checkpoint
     
     # Utilities
     'get_logger',                   # Get configured logger
