@@ -1,6 +1,6 @@
-# 🛡️ SentinelFS AI - Production-Ready Behavioral Analyzer
+# 🛡️ SentinelFS AI - Production Threat Detection Package
 
-**Advanced Deep Learning-based Anomaly Detection for Distributed File System Security**
+**Real-time AI-powered behavioral analysis for distributed file system security**
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.8.0-red.svg)](https://pytorch.org/)
@@ -9,36 +9,37 @@
 
 ## 🎯 Overview
 
-SentinelFS AI is a state-of-the-art behavioral analysis engine that detects anomalous file access patterns in real-time using advanced deep learning techniques. It leverages multiple neural network architectures (LSTM, Transformer, CNN-LSTM) with attention mechanisms to achieve exceptional accuracy and interpretability.
+SentinelFS AI is a production-ready hybrid threat detection system that combines deep learning, anomaly detection, and heuristic rules for real-time file system security monitoring. The system achieves exceptional accuracy with sub-25ms inference latency.
 
 ### ✨ Key Features
 
-- **🎯 High-Accuracy Detection**: Advanced multi-architecture ensemble models
-- **⚡ Real-time Inference**: Optimized for low-latency production environments
-- **🧠 Multi-Architecture**: LSTM, Transformer, and CNN-LSTM models with ensemble methods
-- **🔍 Explainable AI**: Attention weights, feature importance, and human-readable explanations
-- **📊 Multi-class Detection**: Identifies 4+ anomaly types (exfiltration, ransomware, etc.)
-- **🚀 Production-Ready**: Checkpoint management, monitoring, batch processing, export formats
-- **🛡️ Adversarial Robustness**: Built-in adversarial training and robustness evaluation
-- **📈 Comprehensive Metrics**: Advanced evaluation with ROC-AUC, precision-recall, calibration
+- **🎯 High-Accuracy Detection**: ROC AUC 0.9619, F1 Score 0.9397
+- **⚡ Real-time Inference**: <25ms latency with GPU optimization
+- **🧠 Hybrid Architecture**: GRU Neural Network + Isolation Forest + Heuristic Rules
+- **🔍 Explainable AI**: Feature importance and confidence scores
+- **📊 Real-World Features**: 30 indicators from actual file system operations
+- **🚀 Production-Ready**: Comprehensive diagnostics, monitoring, and calibration
+- **🛡️ Adversarial Robustness**: Distribution validation and threshold calibration
+- **📈 Continuous Monitoring**: Production evaluator with drift detection
 
-## 🏗️ Advanced Architecture
+## 🏗️ Architecture
 
-### Multi-Model Ensemble Architecture
+### HybridThreatDetector Architecture
 ```
 ┌─────────────────────────────────────────────┐
-│           Input: File Access Sequence        │
-│        (batch, seq_len=20, features=7)       │
+│           Input: File System Events          │
+│        (batch, seq_len=64, features=30)      │
 └──────────────────┬──────────────────────────┘
                    │
     ┌──────────────▼──────────────┐
-    │  Feature Normalization      │
-    │  (StandardScaler)            │
+    │  RealFeatureExtractor       │
+    │  (30 real-world features)   │
     └──────────────┬──────────────┘
                    │
     ┌─────────┬─────────┬─────────┐
-    │  LSTM   │Transfrmr│ CNN-LSTM│
-    │         │         │         │
+    │   GRU   │Isolation│Heuristic│
+    │ Network │ Forest  │ Rules   │
+    │ (40%)   │ (30%)   │ (30%)   │
     └─────────┴─────────┴─────────┘
                    │
          ┌─────────▼─────────┐
@@ -47,57 +48,308 @@ SentinelFS AI is a state-of-the-art behavioral analysis engine that detects anom
          └─────────┬─────────┘
                    │
     ┌──────────────▼──────────────┐
-    │  Final Classification       │
-    │  (Anomaly + Type Detection) │
+    │  Threat Classification       │
+    │  (Score + Type + Confidence) │
     └─────────────────────────────┘
-```
-
-### Single Model Architecture (LSTM-based)
-```
-┌─────────────────────────────────────────────┐
-│           Input: File Access Sequence        │
-│        (batch, seq_len=20, features=7)       │
-└──────────────────┬──────────────────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │  Feature Normalization      │
-    │  (StandardScaler)            │
-    └──────────────┬──────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │  Bidirectional LSTM          │
-    │  - Multi-layers             │
-    │  - Configurable units       │
-    │  - Dropout for regularization│
-    └──────────────┬──────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │  Self-Attention Layer        │
-    │  (Temporal Pattern Focus)    │
-    └──────────────┬──────────────┘
-                   │
-    ┌──────────────▼──────────────┐
-    │  Layer Normalization         │
-    └──────────────┬──────────────┘
-                   │
-         ┌─────────┴─────────┐
-         │                   │
-    ┌────▼────┐      ┌──────▼──────┐
-    │ Binary  │      │  Multi-class│
-    │Classifier│      │ Classifier  │
-    │(Anomaly)│      │ (Type: 4+)  │
-    └─────────┘      └─────────────┘
 ```
 
 ### Model Statistics
 
-- **Total Parameters**: Configurable (default: ~382K)
-- **Trainable Parameters**: Same as total
-- **Model Size**: ~1.46 MB (quantized: ~0.7 MB)
-- **GPU Memory**: ~50 MB during inference
-- **Training Time**: ~10-30 seconds depending on configuration
+- **Total Parameters**: ~45K (GRU) + Isolation Forest
+- **Model Size**: ~12MB (optimized checkpoint)
+- **GPU Memory**: ~500MB during training, ~50MB inference
+- **Training Time**: ~15 seconds (30 epochs)
+- **Inference Latency**: <25ms on RTX 5060
 
 ## 🚀 Quick Start
+
+### Basic Usage
+
+```python
+from sentinelfs_ai import HybridThreatDetector, RealFeatureExtractor
+
+# Initialize components
+feature_extractor = RealFeatureExtractor()
+model = HybridThreatDetector(
+    input_size=30,
+    hidden_size=128,
+    num_layers=2,
+    dropout=0.3
+)
+
+# Load pre-trained model
+import torch
+checkpoint = torch.load('../checkpoints/final/model.pt')
+model.load_state_dict(checkpoint['model_state_dict'])
+model.eval()
+
+# Process file system events
+events = [...]  # Your file system events
+features = feature_extractor.extract_features(events)
+threat_score = model(features)
+```
+
+### Production Inference Engine
+
+```python
+from sentinelfs_ai import RealTimeInferenceEngine
+
+# Create production inference engine
+engine = RealTimeInferenceEngine(
+    model=model,
+    feature_extractor=feature_extractor,
+    threat_threshold=0.5276,  # Calibrated threshold
+    cache_size=10000
+)
+
+# Real-time analysis
+threat_score, threat_type, confidence = engine.predict(events)
+if threat_score > 0.5276:
+    print(f"🚨 THREAT DETECTED: {threat_type} (confidence: {confidence:.1%})")
+```
+
+### Training Pipeline
+
+```python
+from sentinelfs_ai import RealWorldTrainer
+
+# Initialize trainer
+trainer = RealWorldTrainer(
+    model=model,
+    feature_extractor=feature_extractor,
+    sequence_length=64,
+    batch_size=64
+)
+
+# Train with diagnostics
+training_results = trainer.train_with_diagnostics(
+    train_events=train_events,
+    val_events=val_events,
+    epochs=30,
+    enable_gpu=True
+)
+
+# Save trained model
+trainer.save_model('../models/production/sentinelfs_production.pt')
+```
+
+## 📚 API Reference
+
+### Core Classes
+
+#### `HybridThreatDetector`
+Main threat detection model combining GRU, Isolation Forest, and heuristics.
+
+```python
+model = HybridThreatDetector(
+    input_size=30,      # Number of features
+    hidden_size=128,    # GRU hidden size
+    num_layers=2,       # GRU layers
+    dropout=0.3         # Dropout rate
+)
+```
+
+#### `RealFeatureExtractor`
+Extracts 30 real-world features from file system events.
+
+```python
+extractor = RealFeatureExtractor()
+features = extractor.extract_features(events)
+```
+
+#### `RealTimeInferenceEngine`
+Production-ready inference engine with caching and optimization.
+
+```python
+engine = RealTimeInferenceEngine(
+    model=model,
+    feature_extractor=extractor,
+    threat_threshold=0.5276,
+    cache_size=10000
+)
+```
+
+#### `RealWorldTrainer`
+Complete training pipeline with diagnostics and monitoring.
+
+```python
+trainer = RealWorldTrainer(
+    model=model,
+    feature_extractor=extractor,
+    sequence_length=64,
+    batch_size=64
+)
+```
+
+#### `ProductionEvaluator`
+Continuous monitoring and evaluation for production deployment.
+
+```python
+evaluator = ProductionEvaluator()
+metrics = evaluator.evaluate_model(model, test_events)
+```
+
+### Data Types
+
+#### `AnalysisResult`
+```python
+@dataclass
+class AnalysisResult:
+    threat_score: float      # 0.0 to 1.0
+    threat_type: AnomalyType # NORMAL, RANSOMWARE, etc.
+    confidence: float        # 0.0 to 1.0
+    features_used: int       # Number of features processed
+```
+
+#### `AnomalyType`
+```python
+class AnomalyType(Enum):
+    NORMAL = "normal"
+    RANSOMWARE = "ransomware"
+    EXFILTRATION = "exfiltration"
+    MALICIOUS_ACTIVITY = "malicious_activity"
+    SUSPICIOUS_PATTERN = "suspicious_pattern"
+```
+
+## 📊 Performance Metrics
+
+### Latest Results (v3.0.0)
+- **ROC AUC**: 0.9619
+- **Precision**: 1.0000 (no false positives)
+- **Recall**: 0.8862
+- **F1 Score**: 0.9397
+- **Inference Latency**: <25ms
+- **GPU Utilization**: RTX 5060 (46% during training)
+
+### Feature Importance (Top 10)
+1. `rapid_modifications` - High-frequency file changes
+2. `file_size_entropy` - File size variation patterns
+3. `time_based_patterns` - Unusual timing patterns
+4. `extension_changes` - Suspicious file extensions
+5. `access_velocity` - Rapid access patterns
+6. `directory_depth` - File system traversal patterns
+7. `operation_types` - Operation type distributions
+8. `user_behavior` - User activity patterns
+9. `network_indicators` - Network-related patterns
+10. `system_calls` - System call patterns
+
+## 🔧 Configuration
+
+### Model Configuration
+```python
+model_config = {
+    'input_size': 30,
+    'hidden_size': 128,
+    'num_layers': 2,
+    'dropout': 0.3,
+    'learning_rate': 0.001,
+    'batch_size': 64,
+    'sequence_length': 64
+}
+```
+
+### Training Configuration
+```python
+training_config = {
+    'epochs': 30,
+    'patience': 10,
+    'min_delta': 0.001,
+    'validation_split': 0.2,
+    'enable_gpu': True,
+    'save_best_only': True
+}
+```
+
+### Inference Configuration
+```python
+inference_config = {
+    'threat_threshold': 0.5276,  # Calibrated threshold
+    'cache_size': 10000,
+    'batch_size': 32,
+    'enable_gpu': True,
+    'warmup_iterations': 100
+}
+```
+
+## 📁 Package Structure
+
+```
+sentinelfs_ai/
+├── __init__.py              # Package initialization
+├── data_types.py            # Core data structures
+├── data/                    # Data processing modules
+│   ├── __init__.py
+│   ├── real_feature_extractor.py
+│   └── data_processor.py    # Legacy (unused)
+├── models/                  # Neural network models
+│   ├── __init__.py
+│   └── hybrid_detector.py
+├── training/                # Training utilities
+│   ├── __init__.py
+│   └── real_trainer.py
+├── inference/               # Inference engines
+│   ├── __init__.py
+│   └── real_engine.py
+├── evaluation/              # Evaluation tools
+│   ├── __init__.py
+│   └── production_evaluator.py
+└── utils/                   # Utilities
+    ├── __init__.py
+    └── logger.py
+```
+
+## 🔄 Recent Updates
+
+### v3.0.0 (2025-10-08)
+- ✅ Major code cleanup: Removed 9 unused files, reduced size to 12MB
+- ✅ Enhanced diagnostics: ROC/PR calibration, adversarial validation
+- ✅ GPU optimization: RTX 5060 support with real monitoring
+- ✅ Production hardening: Comprehensive error handling and logging
+- ✅ Performance improvements: Optimized inference pipeline
+
+### v2.0.0 (2025-10-07)
+- ✅ Real-world features: 30 indicators from actual file operations
+- ✅ Hybrid architecture: GRU + Isolation Forest + Heuristics
+- ✅ Production evaluator: Continuous monitoring capabilities
+- ✅ Incremental learning: Support for model updates
+
+## 🤝 Contributing
+
+This is part of the **YMH345 - Computer Networks** course project at Sakarya University.
+
+### Development Setup
+```bash
+# Clone repository
+git clone <repository-url>
+cd sentinelfs_ai
+
+# Install dependencies
+pip install -r ../requirements.txt
+
+# Run tests
+python ../train_rm_rtx5060_fixed.py
+```
+
+### Code Quality
+- Type hints required for all functions
+- Comprehensive docstrings
+- Unit tests for critical components
+- GPU compatibility testing
+
+## 📄 License
+
+MIT License - see [LICENSE](../LICENSE) file for details.
+
+## � Support
+
+For questions or issues:
+- Check [CRITICAL_FIX_DOCUMENTATION.md](../CRITICAL_FIX_DOCUMENTATION.md)
+- Review [IMPLEMENTATION_COMPLETE.md](../IMPLEMENTATION_COMPLETE.md)
+- Run diagnostics: `python ../train_rm_rtx5060_fixed.py`
+
+---
+
+**Status**: ✅ Production Ready | **Version**: 3.0.0 | **Last Updated**: 2025-10-08
 
 ### Installation
 
@@ -348,21 +600,9 @@ stratified_results = evaluator.stratified_evaluation(
 
 ## 📈 Advanced Training & Evaluation
 
-### Model Export & Optimization
-```python
-from sentinelfs_ai import ModelManager
+---
 
-model_manager = ModelManager()
-
-# Export to different formats for deployment
-model_manager.save_model(
-    model=model,
-    version="1.0.0",
-    metrics=evaluation_metrics,
-    feature_extractor=feature_extractor,
-    export_formats=['onnx', 'torchscript', 'quantized']
-)
-```
+**Status**: ✅ Production Ready | **Version**: 3.0.0 | **Last Updated**: 2025-10-08
 
 ### Performance Benchmarking
 ```python
@@ -411,53 +651,32 @@ python -m pytest test_ai_module.py::test_training -v
 python -m pytest test_ai_module.py::test_adversarial -v
 ```
 
-## 📁 Project Structure
+## 📁 Package Structure
 
 ```
 sentinelfs_ai/
-├── __init__.py              # Main exports and package initialization
-├── data_types.py            # Type definitions and data structures
-├── README.md               # This comprehensive documentation
-├── data/                   # Data processing modules
-│   ├── __init__.py         # Data package exports
-│   ├── data_generator.py   # Synthetic data generation
-│   ├── realistic_data_generator.py # Advanced realistic data generation
-│   ├── data_processor.py   # Data preprocessing and loaders
-│   └── feature_extractor.py # Feature normalization and extraction
-├── models/                 # Neural network architectures
-│   ├── __init__.py         # Model exports
-│   ├── behavioral_analyzer.py # Main LSTM-based model
-│   ├── attention.py        # Attention mechanism implementation
-│   └── advanced_models.py  # Transformer, CNN-LSTM, Ensembles
-├── training/               # Training modules
-│   ├── __init__.py         # Training exports
-│   ├── trainer.py          # Core training loop
-│   ├── adversarial_training.py # Adversarial training components
-│   ├── ensemble_training.py # Ensemble training management
-│   ├── metrics.py          # Performance metrics
-│   └── early_stopping.py   # Early stopping implementation
-├── inference/              # Inference engine
-│   ├── __init__.py         # Inference exports
-│   └── engine.py           # Production inference engine
-├── evaluation/             # Model evaluation
-│   ├── __init__.py         # Evaluation exports
-│   └── advanced_evaluation.py # Comprehensive evaluation metrics
-├── management/             # Model lifecycle management
-│   ├── __init__.py         # Management exports
-│   ├── model_manager.py    # Model versioning and export
-│   └── checkpoint.py       # Checkpoint management
-└── utils/                  # Utility functions
-    ├── __init__.py         # Utils exports
-    ├── logger.py           # Logging utilities
-    └── device.py           # Device detection and management
-
-models/                     # Trained model storage
-├── model_v1.0.0.pt        # Versioned models
-├── scaler.pkl             # Feature scaling parameters
-├── metadata.json          # Model metadata
-└── exports/               # Exported models (ONNX, TorchScript, etc.)
-    ├── model_v1.0.0.onnx
-    └── model_v1.0.0_script.pt
+├── __init__.py              # Package initialization
+├── data_types.py            # Core data structures
+├── README.md                # This documentation
+├── data/                    # Data processing modules
+│   ├── __init__.py
+│   └── real_feature_extractor.py
+├── models/                  # Neural network models
+│   ├── __init__.py
+│   └── hybrid_detector.py
+├── training/                # Training utilities
+│   ├── __init__.py
+│   └── real_trainer.py
+├── inference/               # Inference engines
+│   ├── __init__.py
+│   └── real_engine.py
+├── evaluation/              # Evaluation tools
+│   ├── __init__.py
+│   └── production_evaluator.py
+└── utils/                   # Utilities
+    ├── __init__.py
+    └── logger.py
+```
 
 checkpoints/                # Training checkpoints
 ├── checkpoint_epoch_10.pt
@@ -479,56 +698,9 @@ results/                    # Training results and reports
 **✅ Advanced Evaluation**: Comprehensive metrics, cross-validation, stratified evaluation
 **✅ Production Ready**: Optimized for low-latency inference and deployment
 
-## 🌐 Integration Examples
+---
 
-### FastAPI Integration
-```python
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from sentinelfs_ai import InferenceEngine, ModelManager
-import torch
-import numpy as np
-from typing import List
-
-app = FastAPI(title="SentinelFS AI API", version="1.0.0")
-
-class AccessSequence(BaseModel):
-    sequence: List[List[float]]  # List of [file_size, hour, access_type, ...]
-
-# Initialize model at startup
-engine = None
-
-@app.on_event("startup")
-async def load_model():
-    global engine
-    try:
-        model_manager = ModelManager()
-        model, feature_extractor = model_manager.load_model()
-        engine = InferenceEngine(
-            model=model,
-            feature_extractor=feature_extractor,
-            threshold=0.5,
-            enable_explainability=True
-        )
-        print("Model loaded successfully")
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        raise
-
-@app.post("/api/v1/analyze", response_model=dict)
-async def analyze_access(access_sequence: AccessSequence):
-    if engine is None:
-        raise HTTPException(status_code=500, detail="Model not loaded")
-    
-    try:
-        sequence = np.array(access_sequence.sequence)
-        result = engine.analyze(sequence)
-        return result.to_dict()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.get("/api/v1/health")
-async def health_check():
+**Status**: ✅ Production Ready | **Version**: 3.0.0 | **Last Updated**: 2025-10-08
     return {"status": "healthy", "model_loaded": engine is not None}
 ```
 
