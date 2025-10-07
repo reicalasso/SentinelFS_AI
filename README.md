@@ -50,15 +50,6 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 🚀 Quick Start
-
-### Installation
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
 ### Training Demo
 ```bash
 python train_rm_rtx5060_fixed.py
