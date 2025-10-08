@@ -22,3 +22,6 @@ psutil>=5.9.0
 
 # Phase 2.1: Security Engine Integration
 yara-python>=4.2.0
+
+# Phase 2.2: MLOps & Model Versioning
+mlflow>=2.8.0  # Optional: For experiment tracking
