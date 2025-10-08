@@ -34,6 +34,20 @@ from .schemas import (
     StreamConfigResponse
 )
 
+# Import monitoring components
+from ..monitoring.metrics import (
+    init_metrics,
+    record_inference_time,
+    record_prediction,
+    update_model_accuracy,
+    REQUEST_COUNT,
+    REQUEST_LATENCY
+)
+from ..monitoring.middleware import PrometheusMiddleware, MetricsEndpoint
+from ..monitoring.drift_detector import ModelDriftDetector
+from ..monitoring.alerts import AlertManager, log_alert_handler, json_alert_handler
+from ..monitoring.logging_config import setup_logging, logger
+
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -43,6 +57,8 @@ class AppState:
     def __init__(self):
         self.model: Optional[HybridThreatDetector] = None
         self.engine: Optional[StreamingInferenceEngine] = None
+        self.drift_detector: Optional[ModelDriftDetector] = None
+        self.alert_manager: Optional[AlertManager] = None
         self.start_time: float = time.time()
         self.api_version: str = "1.2.0"
         self.model_version: str = "3.1.0"
@@ -84,10 +100,63 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
+    # Setup structured logging
+    global logger
+    logger = setup_logging(level="INFO", json_format=True)
+
     # Startup
-    logger.info("Starting SentinelZer0 API...")
+    logger.logger.info("Starting SentinelZer0 API...")
     
     try:
+        # Initialize monitoring
+        logger.info("Initializing monitoring components...")
+        
+        # Initialize Prometheus metrics
+        init_metrics(
+            model_name="sentinelzer0_ai",
+            model_version=app_state.model_version,
+            model_type="hybrid_gru_isolation_forest"
+        )
+        
+        # Initialize drift detector
+        app_state.drift_detector = ModelDriftDetector(
+            window_size=1000,
+            drift_threshold=0.05,
+            alert_threshold=0.1
+        )
+        
+        # Set baseline for drift detection (use some initial predictions)
+        logger.info("Setting baseline for drift detection...")
+        try:
+            # Generate baseline predictions using the model
+            baseline_events = [
+                {
+                    "event_type": "CREATE",
+                    "path": f"/tmp/test_file_{i}.txt",
+                    "timestamp": time.time() + i,
+                    "size": 1024 + (i * 100),
+                    "is_directory": False
+                }
+                for i in range(100)  # Generate 100 baseline events
+            ]
+            
+            baseline_predictions = app_state.engine.process_batch(baseline_events, return_components=False)
+            baseline_scores = [pred.threat_score for pred in baseline_predictions]
+            
+            app_state.drift_detector.set_baseline(baseline_scores)
+            logger.info(f"✓ Set drift detection baseline with {len(baseline_scores)} samples")
+            
+        except Exception as e:
+            logger.warning(f"Could not set drift detection baseline: {e}")
+            # Continue without baseline - drift detection will start learning after some predictions
+        
+        # Initialize alert manager
+        app_state.alert_manager = AlertManager()
+        app_state.alert_manager.add_notification_handler(log_alert_handler)
+        app_state.alert_manager.add_notification_handler(json_alert_handler)
+        
+        logger.info("✓ Monitoring components initialized")
+        
         # Load model
         logger.info("Loading threat detection model...")
         
@@ -197,6 +266,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add Prometheus metrics endpoint
+MetricsEndpoint.add_to_app(app, endpoint="/prometheus/metrics")
 
 
 # Request logging middleware
@@ -371,10 +443,15 @@ async def predict_threats(request: BatchPredictionRequest):
         events = [event.dict() for event in request.events]
         
         # Process events through streaming engine
+        inference_start = time.time()
         predictions = app_state.engine.process_batch(
             events,
             return_components=request.return_components
         )
+        inference_time = time.time() - inference_start
+        
+        # Record inference metrics
+        record_inference_time(inference_start)
         
         # Convert to response format
         prediction_responses = []
@@ -394,8 +471,33 @@ async def predict_threats(request: BatchPredictionRequest):
             
             if pred.is_threat:
                 threats_detected += 1
+            
+            # Record prediction result for monitoring
+            result = "threat" if pred.is_threat else "benign"
+            record_prediction(result)
+            
+            # Add to drift detector
+            if app_state.drift_detector:
+                app_state.drift_detector.add_prediction(pred.threat_score)
         
         total_latency = (time.time() - start_time) * 1000
+        
+        # Check for alerts
+        if app_state.alert_manager:
+            metrics = {
+                'avg_latency': total_latency / len(request.events),
+                'error_rate': 0.0,  # No errors in this request
+                'drift_score': app_state.drift_detector.get_drift_status().get('drift_score', 0.0) if app_state.drift_detector else 0.0
+            }
+            app_state.alert_manager.check_alerts(metrics)
+        
+        # Log prediction performance
+        logger.log_prediction(
+            event_count=len(request.events),
+            threat_count=threats_detected,
+            latency_ms=total_latency,
+            drift_score=app_state.drift_detector.get_drift_status().get('drift_score', 0.0) if app_state.drift_detector else 0.0
+        )
         
         return BatchPredictionResponse(
             predictions=prediction_responses,
@@ -463,33 +565,225 @@ async def update_stream_config(config: StreamConfigRequest):
         )
 
 
-@app.post(
-    "/metrics/reset",
+@app.get(
+    "/monitoring/drift",
     tags=["Monitoring"],
-    summary="Reset performance metrics",
+    summary="Get drift detection status",
     dependencies=[Depends(verify_api_key)]
 )
-async def reset_metrics():
+async def get_drift_status():
     """
-    Reset performance statistics.
+    Get current model drift detection status.
     
-    Clears all accumulated metrics and counters.
+    Returns information about drift detection, including:
+    - Whether drift has been detected
+    - Current drift score
+    - Detection method used
+    - Baseline status
     
     Requires authentication.
     """
-    if not app_state.engine:
+    if not app_state.drift_detector:
         raise HTTPException(
             status_code=503,
-            detail="Streaming engine not initialized"
+            detail="Drift detector not initialized"
         )
     
-    app_state.engine.reset_stats()
+    status = app_state.drift_detector.get_drift_status()
     
     return {
-        "success": True,
-        "message": "Metrics reset successfully",
-        "timestamp": time.time()
+        "drift_detected": status.get("has_drift", False),
+        "drift_score": status.get("drift_score", 0.0),
+        "confidence": status.get("confidence", 0.0),
+        "method": status.get("method", "unknown"),
+        "baseline_set": status.get("baseline_set", False),
+        "samples_collected": status.get("samples_collected", 0),
+        "last_check": status.get("last_check", 0),
+        "history_size": status.get("history_size", 0)
     }
+
+
+@app.post(
+    "/monitoring/drift/reset",
+    tags=["Monitoring"],
+    summary="Reset drift detection baseline",
+    dependencies=[Depends(verify_api_key)]
+)
+async def reset_drift_baseline():
+    """
+    Reset the drift detection baseline with current prediction data.
+    
+    This will use the most recent predictions as the new baseline
+    for future drift detection.
+    
+    Requires authentication.
+    """
+    if not app_state.drift_detector:
+        raise HTTPException(
+            status_code=503,
+            detail="Drift detector not initialized"
+        )
+    
+    try:
+        app_state.drift_detector.reset_baseline()
+        
+        return {
+            "success": True,
+            "message": "Drift detection baseline reset successfully",
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to reset drift baseline: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reset baseline: {str(e)}"
+        )
+
+
+@app.get(
+    "/monitoring/alerts",
+    tags=["Monitoring"],
+    summary="Get active alerts",
+    dependencies=[Depends(verify_api_key)]
+)
+async def get_active_alerts():
+    """
+    Get all currently active (unresolved) alerts.
+    
+    Returns a list of active alerts with their details.
+    
+    Requires authentication.
+    """
+    if not app_state.alert_manager:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert manager not initialized"
+        )
+    
+    alerts = app_state.alert_manager.get_active_alerts()
+    
+    return {
+        "alerts": [
+            {
+                "id": alert.id,
+                "type": alert.type.value,
+                "severity": alert.severity.value,
+                "title": alert.title,
+                "message": alert.message,
+                "timestamp": alert.timestamp,
+                "metadata": alert.metadata
+            }
+            for alert in alerts
+        ],
+        "total_active": len(alerts)
+    }
+
+
+@app.get(
+    "/monitoring/alerts/history",
+    tags=["Monitoring"],
+    summary="Get alert history",
+    dependencies=[Depends(verify_api_key)]
+)
+async def get_alert_history(limit: int = 50):
+    """
+    Get recent alert history.
+    
+    Parameters:
+    - limit: Maximum number of alerts to return (default: 50)
+    
+    Requires authentication.
+    """
+    if not app_state.alert_manager:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert manager not initialized"
+        )
+    
+    alerts = app_state.alert_manager.get_alert_history(limit)
+    
+    return {
+        "alerts": [
+            {
+                "id": alert.id,
+                "type": alert.type.value,
+                "severity": alert.severity.value,
+                "title": alert.title,
+                "message": alert.message,
+                "timestamp": alert.timestamp,
+                "resolved": alert.resolved,
+                "resolved_at": alert.resolved_at,
+                "metadata": alert.metadata
+            }
+            for alert in alerts
+        ],
+        "total_returned": len(alerts)
+    }
+
+
+@app.post(
+    "/monitoring/alerts/{alert_id}/resolve",
+    tags=["Monitoring"],
+    summary="Resolve an alert",
+    dependencies=[Depends(verify_api_key)]
+)
+async def resolve_alert(alert_id: str, note: str = ""):
+    """
+    Resolve a specific alert.
+    
+    Parameters:
+    - alert_id: ID of the alert to resolve
+    - note: Optional resolution note
+    
+    Requires authentication.
+    """
+    if not app_state.alert_manager:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert manager not initialized"
+        )
+    
+    try:
+        app_state.alert_manager.resolve_alert(alert_id, note)
+        
+        return {
+            "success": True,
+            "message": f"Alert {alert_id} resolved successfully",
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to resolve alert {alert_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to resolve alert: {str(e)}"
+        )
+
+
+@app.get(
+    "/monitoring/alerts/stats",
+    tags=["Monitoring"],
+    summary="Get alert statistics",
+    dependencies=[Depends(verify_api_key)]
+)
+async def get_alert_stats():
+    """
+    Get alert statistics and summary.
+    
+    Returns counts by severity and type, plus other statistics.
+    
+    Requires authentication.
+    """
+    if not app_state.alert_manager:
+        raise HTTPException(
+            status_code=503,
+            detail="Alert manager not initialized"
+        )
+    
+    stats = app_state.alert_manager.get_alert_stats()
+    
+    return stats
 
 
 if __name__ == "__main__":
