@@ -43,11 +43,11 @@ def test_root_endpoint():
         logger.info(f"✓ Version: {data['version']}")
         logger.info(f"✓ Status: {data['status']}")
         logger.info("✅ Root endpoint test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Root endpoint test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_health_endpoint():
@@ -70,11 +70,11 @@ def test_health_endpoint():
         logger.info(f"✓ GPU Available: {data['gpu_available']}")
         logger.info(f"✓ Uptime: {data['uptime_seconds']:.2f}s")
         logger.info("✅ Health check test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Health check test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_authentication():
@@ -101,11 +101,11 @@ def test_authentication():
         logger.info("✓ Request with valid API key accepted (200)")
         
         logger.info("✅ Authentication test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Authentication test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_metrics_endpoint():
@@ -134,11 +134,11 @@ def test_metrics_endpoint():
         logger.info(f"✓ Average Latency: {data['avg_latency_ms']:.2f}ms")
         logger.info(f"✓ Buffer Size: {data['buffer_size']}")
         logger.info("✅ Metrics endpoint test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Metrics endpoint test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_model_info_endpoint():
@@ -163,11 +163,11 @@ def test_model_info_endpoint():
         logger.info(f"✓ Threshold: {data['threshold']}")
         logger.info(f"✓ Architecture: {data['architecture']['type']}")
         logger.info("✅ Model info endpoint test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Model info endpoint test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_predict_endpoint_single():
@@ -218,11 +218,11 @@ def test_predict_endpoint_single():
         
         logger.info(f"✓ Total Latency: {data['total_latency_ms']:.2f}ms")
         logger.info("✅ Single event prediction test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Single event prediction test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_predict_endpoint_batch():
@@ -274,11 +274,11 @@ def test_predict_endpoint_batch():
         logger.info(f"✓ Request Time: {request_time:.2f}ms")
         logger.info(f"✓ Throughput: {throughput:.2f} events/sec")
         logger.info("✅ Batch prediction test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Batch prediction test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_config_endpoint():
@@ -311,11 +311,11 @@ def test_config_endpoint():
         logger.info(f"✓ New Threshold: {data['config']['threshold']}")
         logger.info(f"✓ New Min Confidence: {data['config']['min_confidence']}")
         logger.info("✅ Configuration endpoint test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ Configuration endpoint test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def test_openapi_docs():
@@ -346,11 +346,11 @@ def test_openapi_docs():
         logger.info(f"✓ API Version: {schema['info']['version']}")
         
         logger.info("✅ OpenAPI documentation test passed!\n")
-        return True
+        assert True
         
     except Exception as e:
         logger.error(f"❌ OpenAPI documentation test failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
 
 def main():

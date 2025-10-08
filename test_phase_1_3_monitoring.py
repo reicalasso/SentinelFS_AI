@@ -30,7 +30,7 @@ def test_monitoring_components():
         print("✅ All monitoring components imported successfully")
     except ImportError as e:
         print(f"❌ Import failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 2: Initialize metrics
     print("\n2. Testing metrics initialization...")
@@ -43,7 +43,7 @@ def test_monitoring_components():
         print("✅ Metrics initialized successfully")
     except Exception as e:
         print(f"❌ Metrics initialization failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 3: Drift detector
     print("\n3. Testing drift detection...")
@@ -60,7 +60,7 @@ def test_monitoring_components():
         print(f"✅ Drift detector working - Baseline set: {status['baseline_set']}")
     except Exception as e:
         print(f"❌ Drift detector failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 4: Alert manager
     print("\n4. Testing alert system...")
@@ -75,7 +75,7 @@ def test_monitoring_components():
         print(f"✅ Alert manager working - Active alerts: {len(alerts)}")
     except Exception as e:
         print(f"❌ Alert manager failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 5: Structured logging
     print("\n5. Testing structured logging...")
@@ -86,11 +86,11 @@ def test_monitoring_components():
         print("✅ Structured logging working")
     except Exception as e:
         print(f"❌ Structured logging failed: {e}")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 6: Check if Grafana dashboard exists
     print("\n6. Testing Grafana dashboard...")
-    dashboard_path = Path("sentinelfs_ai/monitoring/grafana/dashboard.json")
+    dashboard_path = Path("sentinelzer0/monitoring/grafana/dashboard.json")
     if dashboard_path.exists():
         with open(dashboard_path) as f:
             dashboard = json.load(f)
@@ -98,10 +98,10 @@ def test_monitoring_components():
             print("✅ Grafana dashboard configuration found")
         else:
             print("❌ Grafana dashboard configuration invalid")
-            return False
+            raise AssertionError("Test failed")
     else:
         print("❌ Grafana dashboard file not found")
-        return False
+        raise AssertionError("Test failed")
 
     # Test 7: Check setup script
     print("\n7. Testing setup script...")
@@ -110,7 +110,7 @@ def test_monitoring_components():
         print("✅ Monitoring setup script found and executable")
     else:
         print("❌ Setup script not found or not executable")
-        return False
+        raise AssertionError("Test failed")
 
     print("\n" + "=" * 50)
     print("🎉 All Phase 1.3 monitoring components tested successfully!")
@@ -122,7 +122,7 @@ def test_monitoring_components():
     print("   - Prometheus: http://localhost:9090")
     print("   - Grafana: http://localhost:3000")
 
-    return True
+    assert True
 
 if __name__ == "__main__":
     success = test_monitoring_components()
