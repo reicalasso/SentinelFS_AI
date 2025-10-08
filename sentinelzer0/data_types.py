@@ -20,6 +20,13 @@ class AnalysisResult:
     anomaly_type_confidence: Optional[float] = None
     attention_weights: Optional[List[float]] = None
     explanation: Optional[Dict[str, Any]] = None
+
+    # Phase 2.1: Security Engine Integration
+    security_engine_enabled: bool = False
+    security_score: Optional[float] = None
+    security_threat_level: Optional[str] = None
+    security_details: Optional[Dict[str, Any]] = None
+    detection_methods: Optional[List[str]] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API response."""
@@ -41,7 +48,19 @@ class AnalysisResult:
             result['attention_weights'] = [float(w) for w in self.attention_weights]
         if self.explanation:
             result['explanation'] = self.explanation
-        
+
+        # Phase 2.1: Security Engine fields
+        if self.security_engine_enabled:
+            result['security_engine_enabled'] = self.security_engine_enabled
+        if self.security_score is not None:
+            result['security_score'] = float(self.security_score)
+        if self.security_threat_level:
+            result['security_threat_level'] = self.security_threat_level
+        if self.security_details:
+            result['security_details'] = self.security_details
+        if self.detection_methods:
+            result['detection_methods'] = self.detection_methods
+
         return result
 
 

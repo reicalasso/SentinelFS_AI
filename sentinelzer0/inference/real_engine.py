@@ -16,6 +16,7 @@ from ..data.real_feature_extractor import RealFeatureExtractor
 from ..data_types import AnalysisResult, AnomalyType
 from ..utils.logger import get_logger
 from ..utils.device import get_device
+from ..security import SecurityEngine
 
 logger = get_logger(__name__)
 
@@ -43,7 +44,8 @@ class RealTimeInferenceEngine:
         enable_caching: bool = True,
         enable_batching: bool = True,
         batch_timeout_ms: float = 5.0,
-        max_batch_size: int = 32
+        max_batch_size: int = 32,
+        enable_security_engine: bool = True
     ):
         """
         Initialize real-time inference engine.
@@ -57,6 +59,7 @@ class RealTimeInferenceEngine:
             enable_batching: Enable request batching
             batch_timeout_ms: Max wait time for batching
             max_batch_size: Maximum batch size
+            enable_security_engine: Enable advanced security engine
         """
         self.model = model
         self.feature_extractor = feature_extractor
@@ -70,6 +73,10 @@ class RealTimeInferenceEngine:
         
         # Optimize model for inference
         self._optimize_model()
+        
+        # Security Engine Integration (Phase 2.1)
+        self.enable_security_engine = enable_security_engine
+        self.security_engine = SecurityEngine() if enable_security_engine else None
         
         # User sequence buffers (thread-safe)
         self.user_sequences: Dict[str, deque] = {}
@@ -246,18 +253,38 @@ class RealTimeInferenceEngine:
         event: Dict[str, Any],
         return_explanation: bool = False
     ) -> AnalysisResult:
-        """Perform actual model inference."""
+        """Perform actual model inference with security engine integration."""
         # Prepare input
         input_tensor = torch.FloatTensor(features).unsqueeze(0).to(self.device)
-        
-        # Inference
+
+        # AI Model Inference
         with torch.no_grad():
             score, components = self.model(input_tensor, return_components=True)
-        
+
         score_value = score.item()
         is_threat = score_value > self.threat_threshold
         confidence = abs(score_value - 0.5) * 2  # Distance from decision boundary
-        
+
+        # Security Engine Analysis (Phase 2.1)
+        security_result = None
+        if self.enable_security_engine and self.security_engine:
+            try:
+                # Analyze file if path is available
+                file_path = event.get('file_path')
+                if file_path:
+                    security_result = self.security_engine.analyze_file(
+                        file_path=file_path,
+                        ai_score=score_value
+                    )
+                    # Update threat assessment with security engine
+                    if security_result.final_decision:
+                        is_threat = True
+                        # Adjust confidence based on security engine
+                        confidence = max(confidence, security_result.combined_score)
+                        score_value = max(score_value, security_result.combined_score)
+            except Exception as e:
+                logger.warning(f"Security engine analysis failed: {e}")
+
         # Determine anomaly type if threat detected
         anomaly_type = None
         anomaly_type_confidence = None
@@ -284,7 +311,18 @@ class RealTimeInferenceEngine:
             anomaly_type=anomaly_type,
             anomaly_type_confidence=anomaly_type_confidence,
             attention_weights=components['attention_weights'][0].squeeze().cpu().numpy().tolist() if components else None,
-            explanation=explanation
+            explanation=explanation,
+            # Phase 2.1: Security Engine Integration
+            security_engine_enabled=self.enable_security_engine,
+            security_score=security_result.combined_score if security_result else None,
+            security_threat_level=security_result.threat_level.value if security_result else None,
+            security_details={
+                'ai_score': security_result.ai_score if security_result else None,
+                'security_score': security_result.security_score if security_result else None,
+                'correlation_factors': security_result.correlation_factors if security_result else None,
+                'results': [r.__dict__ for r in security_result.results] if security_result else None
+            } if security_result else None,
+            detection_methods=[m.value for m in security_result.detection_methods] if security_result else None
         )
         
         return result
