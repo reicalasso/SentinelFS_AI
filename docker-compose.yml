@@ -13,6 +13,7 @@ services:
     environment:
       - LOG_LEVEL=info
       - MODEL_PATH=/models/production
+      - SENTINELFS_MODEL_PATH=/models/production/trained_model.pt
       - DATA_PATH=/data
       - PROMETHEUS_PORT=9090
       - REDIS_HOST=redis

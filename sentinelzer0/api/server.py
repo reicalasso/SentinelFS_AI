@@ -165,7 +165,7 @@ async def lifespan(app: FastAPI):
         model_path = MODEL_PATH
         
         try:
-            checkpoint = torch.load(model_path, map_location='cpu')
+            checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
             
             if 'model_state_dict' in checkpoint:
                 state_dict = checkpoint['model_state_dict']
@@ -174,24 +174,39 @@ async def lifespan(app: FastAPI):
                 if 'rnn.weight_ih_l0' in state_dict:
                     # Calculate hidden_size from weight shape
                     weight_shape = state_dict['rnn.weight_ih_l0'].shape[0]
-                    # For GRU: weight_shape = 3 * hidden_size (for bidirectional)
-                    hidden_size = weight_shape // 6  # 3 gates * 2 directions
+                    # For GRU with bidirectional: weight_shape = 3 * hidden_size * 2
+                    # For LSTM with bidirectional: weight_shape = 4 * hidden_size * 2
+                    hidden_size = weight_shape // 6  # 3 gates * 2 directions for GRU
                     
-                    # Calculate num_layers
+                    # Check if LSTM (4 gates)
+                    is_lstm = 'lstm' in str(checkpoint.get('model_config', {})).lower()
+                    if is_lstm or weight_shape % 8 == 0:  # LSTM has 4 gates
+                        hidden_size = weight_shape // 8  # 4 gates * 2 directions
+                    
+                    # Count layers
                     num_layers = 1
                     for key in state_dict.keys():
-                        if 'rnn.weight_ih_l' in key:
+                        if 'rnn.weight_ih_l' in key and not 'reverse' in key:
                             layer_num = int(key.split('_l')[1][0])
                             num_layers = max(num_layers, layer_num + 1)
                     
-                    logger.logger.info(f"Detected architecture: hidden_size={hidden_size}, num_layers={num_layers}")
+                    # Try to get from checkpoint config if available
+                    if 'model_config' in checkpoint:
+                        hidden_size = checkpoint['model_config'].get('hidden_size', hidden_size)
+                        num_layers = checkpoint['model_config'].get('num_layers', num_layers)
+                        dropout = checkpoint['model_config'].get('dropout', 0.3)
+                    else:
+                        dropout = 0.3
+                    
+                    logger.logger.info(f"Detected architecture: hidden_size={hidden_size}, num_layers={num_layers}, dropout={dropout}")
                     
                     # Create model with matching architecture
                     app_state.model = HybridThreatDetector(
                         input_size=30,
                         hidden_size=hidden_size,
                         num_layers=num_layers,
-                        use_gru=True
+                        dropout=dropout,
+                        use_gru=False  # LSTM by default
                     )
                     
                     app_state.model.load_state_dict(state_dict)
