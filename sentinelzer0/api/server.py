@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
     
     try:
         # Initialize monitoring
-        logger.info("Initializing monitoring components...")
+        logger.logger.info("Initializing monitoring components...")
         
         # Initialize Prometheus metrics
         init_metrics(
@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
         )
         
         # Set baseline for drift detection (use some initial predictions)
-        logger.info("Setting baseline for drift detection...")
+        logger.logger.info("Setting baseline for drift detection...")
         try:
             # Generate baseline predictions using the model
             baseline_events = [
@@ -144,10 +144,10 @@ async def lifespan(app: FastAPI):
             baseline_scores = [pred.threat_score for pred in baseline_predictions]
             
             app_state.drift_detector.set_baseline(baseline_scores)
-            logger.info(f"✓ Set drift detection baseline with {len(baseline_scores)} samples")
+            logger.logger.info(f"✓ Set drift detection baseline with {len(baseline_scores)} samples")
             
         except Exception as e:
-            logger.warning(f"Could not set drift detection baseline: {e}")
+            logger.logger.warning(f"Could not set drift detection baseline: {e}")
             # Continue without baseline - drift detection will start learning after some predictions
         
         # Initialize alert manager
@@ -155,10 +155,10 @@ async def lifespan(app: FastAPI):
         app_state.alert_manager.add_notification_handler(log_alert_handler)
         app_state.alert_manager.add_notification_handler(json_alert_handler)
         
-        logger.info("✓ Monitoring components initialized")
+        logger.logger.info("✓ Monitoring components initialized")
         
         # Load model
-        logger.info("Loading threat detection model...")
+        logger.logger.info("Loading threat detection model...")
         
         # Try to load pre-trained weights if available
         model_loaded = False
@@ -184,7 +184,7 @@ async def lifespan(app: FastAPI):
                             layer_num = int(key.split('_l')[1][0])
                             num_layers = max(num_layers, layer_num + 1)
                     
-                    logger.info(f"Detected architecture: hidden_size={hidden_size}, num_layers={num_layers}")
+                    logger.logger.info(f"Detected architecture: hidden_size={hidden_size}, num_layers={num_layers}")
                     
                     # Create model with matching architecture
                     app_state.model = HybridThreatDetector(
@@ -195,7 +195,7 @@ async def lifespan(app: FastAPI):
                     )
                     
                     app_state.model.load_state_dict(state_dict)
-                    logger.info("✓ Loaded pre-trained model with matching architecture")
+                    logger.logger.info("✓ Loaded pre-trained model with matching architecture")
                     model_loaded = True
                 else:
                     raise ValueError("Invalid checkpoint format")
@@ -203,17 +203,17 @@ async def lifespan(app: FastAPI):
                 raise ValueError("No model_state_dict in checkpoint")
                 
         except FileNotFoundError:
-            logger.warning(f"Model file not found: {model_path}")
+            logger.logger.warning(f"Model file not found: {model_path}")
         except Exception as e:
-            logger.warning(f"Could not load pre-trained weights: {e}")
+            logger.logger.warning(f"Could not load pre-trained weights: {e}")
         
         # Fall back to default model if loading failed
         if not model_loaded:
-            logger.info("Using randomly initialized model (default architecture)")
+            logger.logger.info("Using randomly initialized model (default architecture)")
             app_state.model = HybridThreatDetector(input_size=30)
         
         # Initialize streaming engine
-        logger.info("Initializing streaming inference engine...")
+        logger.logger.info("Initializing streaming inference engine...")
         app_state.engine = StreamingInferenceEngine(
             model=app_state.model,
             sequence_length=64,
@@ -221,20 +221,20 @@ async def lifespan(app: FastAPI):
             device='auto'
         )
         
-        logger.info(f"✓ API started on device: {app_state.engine.device}")
-        logger.info(f"✓ Streaming engine ready with buffer size: {app_state.engine.sequence_length}")
+        logger.logger.info(f"✓ API started on device: {app_state.engine.device}")
+        logger.logger.info(f"✓ Streaming engine ready with buffer size: {app_state.engine.sequence_length}")
         
     except Exception as e:
-        logger.error(f"Failed to initialize API: {e}")
+        logger.logger.error(f"Failed to initialize API: {e}")
         raise
     
     yield
     
     # Shutdown
-    logger.info("Shutting down SentinelZer0 API...")
+    logger.logger.info("Shutting down SentinelZer0 API...")
     if app_state.engine:
         app_state.engine.clear_buffer()
-    logger.info("✓ Shutdown complete")
+    logger.logger.info("✓ Shutdown complete")
 
 
 # Create FastAPI app
@@ -278,14 +278,14 @@ async def log_requests(request: Request, call_next):
     start_time = time.time()
     
     # Log request
-    logger.info(f"Request: {request.method} {request.url.path}")
+    logger.logger.info(f"Request: {request.method} {request.url.path}")
     
     # Process request
     response = await call_next(request)
     
     # Log response
     process_time = (time.time() - start_time) * 1000
-    logger.info(
+    logger.logger.info(
         f"Response: {response.status_code} | "
         f"Time: {process_time:.2f}ms | "
         f"Path: {request.url.path}"
@@ -297,7 +297,7 @@ async def log_requests(request: Request, call_next):
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
@@ -507,7 +507,7 @@ async def predict_threats(request: BatchPredictionRequest):
         )
         
     except Exception as e:
-        logger.error(f"Prediction error: {e}", exc_info=True)
+        logger.logger.error(f"Prediction error: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Prediction failed: {str(e)}"
@@ -545,7 +545,7 @@ async def update_stream_config(config: StreamConfigRequest):
         
         # Note: sequence_length cannot be changed without reinitializing engine
         if config.sequence_length != app_state.engine.sequence_length:
-            logger.warning("Sequence length change requires engine restart")
+            logger.logger.warning("Sequence length change requires engine restart")
         
         return StreamConfigResponse(
             success=True,
@@ -558,7 +558,7 @@ async def update_stream_config(config: StreamConfigRequest):
         )
         
     except Exception as e:
-        logger.error(f"Configuration update error: {e}", exc_info=True)
+        logger.logger.error(f"Configuration update error: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Configuration update failed: {str(e)}"
@@ -634,7 +634,7 @@ async def reset_drift_baseline():
         }
         
     except Exception as e:
-        logger.error(f"Failed to reset drift baseline: {e}")
+        logger.logger.error(f"Failed to reset drift baseline: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to reset baseline: {str(e)}"
@@ -754,7 +754,7 @@ async def resolve_alert(alert_id: str, note: str = ""):
         }
         
     except Exception as e:
-        logger.error(f"Failed to resolve alert {alert_id}: {e}")
+        logger.logger.error(f"Failed to resolve alert {alert_id}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to resolve alert: {str(e)}"
