@@ -1,25 +1,28 @@
 # SentinelZer0 – Production Threat Detection System
 
-**Version 3.2.0** - Real-time AI-powered threat detection for distributed file systems.
+**Version 3.3.0** - Enterprise-grade AI-powered threat detection with comprehensive monitoring and alerting.
 
-This repository contains a production-ready hybrid threat detection system combining neural networks, anomaly detection, and heuristic analysis. The system is designed for real-world deployment with <1ms inference latency, REST API access, and >95% accuracy.
+This repository contains a production-ready hybrid threat detection system combining neural networks, anomaly detection, and heuristic analysis. The system is designed for real-world deployment with <1ms inference latency, REST API access, enterprise monitoring, and >95% accuracy.
 
-## 🎉 Latest: Phase 1.2 Complete - REST API Framework
+## 🎉 Latest: Version 3.3.0 Complete - Enterprise Monitoring & Alerting
 
-✅ **NEW**: Production-ready REST API with FastAPI  
-✅ **NEW**: Interactive Swagger UI documentation  
-✅ **NEW**: API key authentication and security  
-✅ **NEW**: Batch and real-time prediction endpoints  
-✅ **NEW**: Performance monitoring and metrics API  
+✅ **NEW**: Multi-channel alerting system (Email, Slack, Discord, PagerDuty, Webhooks)  
+✅ **NEW**: ELK stack integration for centralized log aggregation  
+✅ **NEW**: Grafana dashboards with 6 production alert rules  
+✅ **NEW**: Comprehensive monitoring playbooks and incident response  
+✅ **NEW**: Enhanced drift detection and model performance monitoring  
+✅ **NEW**: Production evaluator with automated health checks  
 
-### Phase 1.1: Real-Time Stream Processing ✅
+### Phase 1.3: Enterprise Monitoring ✅
 
-✅ Real-time event stream processing with sub-millisecond latency  
-✅ Thread-safe sliding window buffer for continuous monitoring  
-✅ GPU-accelerated streaming inference (1,197 events/sec)  
-✅ Concurrent multi-stream support  
+✅ Complete monitoring stack (Prometheus + Grafana + ELK)  
+✅ Multi-channel alerting with rich formatting  
+✅ Centralized logging with Elasticsearch  
+✅ Interactive dashboards and visualizations  
+✅ Incident response playbooks  
+✅ Automated health checks and diagnostics  
 
-See [PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md) and [PHASE_1_2_SUMMARY.md](PHASE_1_2_SUMMARY.md) for complete details.
+See [PHASE_1_3_SUMMARY.md](PHASE_1_3_SUMMARY.md) for complete monitoring implementation details.
 
 ## ✨ What's Included
 
@@ -30,15 +33,23 @@ See [PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md) and [PHASE_1_2_SUMMARY.md](PHAS
   - `training/`: RealWorldTrainer with incremental learning
   - `inference/`: RealTimeInferenceEngine (<25ms latency)
   - `evaluation/`: ProductionEvaluator for continuous monitoring
+  - `monitoring/`: Enterprise monitoring and alerting system
+
+### Monitoring & Alerting
+- **`monitoring/alerts.py`**: Multi-channel alerting (Email, Slack, Discord, PagerDuty)
+- **`monitoring/elk/`**: Complete ELK stack configuration
+- **`monitoring/grafana/`**: Alert rules and dashboard configurations
+- **`monitoring/playbooks/`**: Incident response and maintenance procedures
+- **`setup_monitoring.sh`**: One-click monitoring deployment
 
 ### Pre-trained Models
 - **`models/production/`**: Production-ready model checkpoints
-  - `sentinelfs_production.pt` - Optimized production model
+  - `sentinelfs_fixed.pt` - Optimized production model
   - `sentinelfs_production_5060.pt` - RTX 5060 optimized version
 
 ### Scripts & Documentation
 - **`train_rm_rtx5060_fixed.py`**: Complete training and deployment script with diagnostics
-- **`requirements.txt`**: Production dependencies
+- **`requirements.txt`**: Production dependencies with monitoring stack
 - **`checkpoints/final/`**: Latest trained model with Isolation Forest and heuristics
 
 ## 🚀 Quick Start
@@ -55,50 +66,47 @@ pip install -r requirements.txt
 python train_rm_rtx5060_fixed.py
 ```
 
-This demonstrates the complete workflow:
-- ✅ Enhanced realistic data generation (4000 normal + 800 anomalous events)
-- ✅ Adversarial validation for distribution matching
-- ✅ Hybrid model training (GRU + Isolation Forest + Heuristics)
-- ✅ ROC/PR curve-based threshold calibration
-- ✅ Real-time inference testing (<25ms)
-- ✅ Comprehensive diagnostics and monitoring
+### Production Deployment with Monitoring
+```bash
+# 1. Start the API server
+./start_api_server.sh
 
-### Production Usage
+# 2. Setup monitoring stack
+./setup_monitoring.sh
 
+# 3. Start ELK stack (optional, for log aggregation)
+cd sentinelzer0/monitoring/elk && docker-compose up -d
+```
+
+**Access Points:**
+- **API**: http://localhost:8000/docs (Swagger UI)
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Kibana**: http://localhost:5601 (if ELK enabled)
+
+### Monitoring Configuration
 ```python
-from sentinelzer0 import (
-    HybridThreatDetector,
-    RealFeatureExtractor,
-    RealTimeInferenceEngine,
-    ProductionEvaluator
+from sentinelzer0.monitoring.alerts import (
+    alert_manager, AlertSeverity, AlertType,
+    EmailAlertHandler, SlackAlertHandler
 )
 
-# Initialize components
-feature_extractor = RealFeatureExtractor()
-model = HybridThreatDetector(
-    input_size=30,
-    hidden_size=128,
-    num_layers=2,
-    dropout=0.3
+# Configure email alerts
+email_handler = EmailAlertHandler(
+    smtp_server="smtp.gmail.com",
+    smtp_port=587,
+    username="alerts@yourcompany.com",
+    password="your-password",
+    from_email="alerts@yourcompany.com",
+    to_emails=["security@yourcompany.com"]
 )
+alert_manager.add_handler(email_handler)
 
-# Load trained model
-import torch
-checkpoint = torch.load('checkpoints/final/model.pt')
-model.load_state_dict(checkpoint['model_state_dict'])
-
-# Create inference engine
-engine = RealTimeInferenceEngine(
-    model=model,
-    feature_extractor=feature_extractor,
-    threat_threshold=0.5276,  # Calibrated threshold
-    cache_size=10000
+# Configure Slack alerts
+slack_handler = SlackAlertHandler(
+    webhook_url="https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
 )
-
-# Analyze file system events
-threat_score, threat_type, confidence = engine.predict(file_events)
-if threat_score > 0.5276:
-    print(f"⚠️ Threat detected: {threat_type} (confidence: {confidence:.1%})")
+alert_manager.add_handler(slack_handler)
 ```
 
 ## 📊 Performance Metrics
@@ -113,65 +121,136 @@ if threat_score > 0.5276:
 | **Training Time** | ~15 seconds (30 epochs) |
 | **GPU Support** | ✅ RTX 5060 (8GB) |
 | **Model Size** | ~12MB (optimized) |
+| **Monitoring** | ✅ Prometheus + Grafana + ELK |
+| **Alert Channels** | ✅ Email, Slack, Discord, PagerDuty |
+| **Uptime Monitoring** | ✅ 99.9% availability tracking |
 
 ## 🏗️ Architecture
 
-**HybridThreatDetector** - Three-component ensemble:
-- **40%** GRU Neural Network - Sequential pattern learning
-- **30%** Isolation Forest - Unsupervised anomaly detection
-- **30%** Heuristic Rules - Domain-specific threat indicators
+### Enterprise Monitoring Stack
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SentinelFS AI System                      │
+├─────────────────────────────────────────────────────────────┤
+│  Application Layer: FastAPI + Threat Detection Engine       │
+├─────────────────────────────────────────────────────────────┤
+│  Monitoring Layer: Prometheus + Grafana + AlertManager      │
+├─────────────────────────────────────────────────────────────┤
+│  Logging Layer: ELK Stack (Elasticsearch + Logstash + Kibana)│
+├─────────────────────────────────────────────────────────────┤
+│  Alert Channels: Email, Slack, Discord, PagerDuty, Webhooks │
+└─────────────────────────────────────────────────────────────┘
+```
 
-**Features** - 30 real-world indicators:
-- Temporal patterns (access frequency, time-of-day)
-- File characteristics (size, type, entropy)
-- Behavioral signals (velocity, modification rate)
-- Security indicators (ransomware patterns, suspicious extensions)
+### HybridThreatDetector Architecture
+```
+┌─────────────────────────────────────────────┐
+│           Input: File System Events          │
+│        (batch, seq_len=64, features=30)      │
+└──────────────────┬──────────────────────────┘
+                   │
+    ┌──────────────▼──────────────┐
+    │  RealFeatureExtractor       │
+    │  (30 real-world features)   │
+    └──────────────┬──────────────┘
+                   │
+    ┌─────────┬─────────┬─────────┐
+    │   GRU   │Isolation│Heuristic│
+    │ Network │ Forest  │ Rules   │
+    │ (40%)   │ (30%)   │ (30%)   │
+    └─────────┴─────────┴─────────┘
+                   │
+         ┌─────────▼─────────┐
+         │ Ensemble Fusion   │
+         │ (Weighted Average)│
+         └─────────┬─────────┘
+                   │
+    ┌──────────────▼──────────────┐
+    │  ProductionEvaluator        │
+    │  (Drift Detection + Health) │
+    └──────────────┬──────────────┘
+                   │
+         ┌─────────▼─────────┐
+         │   Alert Manager   │
+         │ (Multi-Channel)  │
+         └───────────────────┘
+```
 
 ## 📚 Documentation
 
+### Core Documentation
 - **[sentinelzer0/README.md](sentinelzer0/README.md)** - Package API reference and usage guide
+- **[PHASE_1_3_SUMMARY.md](PHASE_1_3_SUMMARY.md)** - Enterprise monitoring implementation
+- **[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)** - Production deployment guide
+- **[ROADMAP.md](ROADMAP.md)** - Development roadmap and future plans
+
+### Monitoring & Alerting
+- **[monitoring/playbooks/README.md](sentinelzer0/monitoring/playbooks/README.md)** - Incident response playbooks
+- **[monitoring/elk/README.md](sentinelzer0/monitoring/elk/README.md)** - ELK stack setup guide
+- **[setup_monitoring.sh](setup_monitoring.sh)** - Automated monitoring deployment
+
+### Technical Documentation
 - **[MODEL_COMPARISON.md](MODEL_COMPARISON.md)** - Architecture comparison and design decisions
-- **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - Recent cleanup and migration guide
-- **[CRITICAL_FIX_DOCUMENTATION.md](CRITICAL_FIX_DOCUMENTATION.md)** - Critical fixes and improvements
-- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Implementation completion summary
+- **[PHASE_1_1_SUMMARY.md](PHASE_1_1_SUMMARY.md)** - Real-time stream processing
+- **[PHASE_1_2_SUMMARY.md](PHASE_1_2_SUMMARY.md)** - REST API framework
+- **[API_QUICKSTART.md](API_QUICKSTART.md)** - API usage examples
 
-## 🔄 Recent Changes (v3.0.0)
+## 🔄 Recent Changes (v3.3.0)
 
-✅ **Major Code Cleanup (2025-10-08)**
-- Removed 9 unused Python files (~3000+ lines of dead code)
-- Project size reduced from 6.9GB to 12MB
-- File count reduced to 31 optimized files
-- All imports verified and working
+✅ **Enterprise Monitoring & Alerting (2025-10-08)**
+- Complete monitoring stack: Prometheus + Grafana + ELK
+- Multi-channel alerting: Email, Slack, Discord, PagerDuty, Webhooks
+- 6 production alert rules for latency, errors, drift, memory, availability
+- Centralized logging with Elasticsearch and Kibana dashboards
+- Comprehensive incident response playbooks
+- Automated health checks and drift detection
 
-✅ **Enhanced Diagnostics & Calibration**
-- ROC/PR curve-based threshold calibration (optimal: 0.5276)
-- Real GPU monitoring with nvidia-smi integration
-- Adversarial validation for train/val distribution matching
-- Comprehensive score distribution analysis
-- Enhanced test data with verified threat patterns
+✅ **Enhanced Alert System**
+- HTML email alerts with rich formatting
+- Slack notifications with emojis and structured attachments
+- Discord webhook integration with embeds
+- PagerDuty event triggering for critical incidents
+- Generic webhook support for custom integrations
+- Async alert processing with thread pools
 
-✅ **Production-Ready System**
-- Hybrid detection: GRU + Isolation Forest + Heuristic Rules
-- 30 real-world features from actual file system operations
-- <25ms real-time inference latency
-- RTX 5060 GPU optimization
-- Incremental learning support
+✅ **ELK Stack Integration**
+- Docker Compose setup for Elasticsearch, Logstash, Kibana, Filebeat
+- Logstash pipeline for JSON log parsing and enrichment
+- GeoIP and user agent analysis
+- Custom Elasticsearch templates for SentinelFS logs
+- Pre-built Kibana dashboards for threat monitoring
 
-See [CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md) and [CRITICAL_FIX_DOCUMENTATION.md](CRITICAL_FIX_DOCUMENTATION.md) for detailed changes.
+✅ **Production Monitoring Features**
+- Model drift detection with automated alerts
+- Performance monitoring with latency and error tracking
+- Memory usage monitoring with resource alerts
+- Service availability monitoring with uptime tracking
+- Structured JSON logging for all components
+
+See [PHASE_1_3_SUMMARY.md](PHASE_1_3_SUMMARY.md) for detailed monitoring implementation.
 
 ## 🎯 Use Cases
 
 - **Real-time Threat Detection**: Monitor file system operations for ransomware, data exfiltration
 - **Behavioral Analysis**: Detect anomalous access patterns and user behavior
-- **Security Monitoring**: Continuous evaluation with drift detection
-- **Incident Response**: Fast inference for immediate threat assessment
+- **Security Monitoring**: Continuous evaluation with drift detection and alerting
+- **Incident Response**: Fast inference with comprehensive monitoring and playbooks
+- **Enterprise Integration**: Multi-channel alerting and centralized log aggregation
 
 ## 📦 Requirements
 
+### Core Dependencies
 - Python 3.13+
 - PyTorch 2.8.0+
 - CUDA 12.8+ (optional, for GPU acceleration)
 - scikit-learn, numpy, pandas, matplotlib
+
+### Monitoring Stack (Optional)
+- Prometheus 2.40+
+- Grafana 9.0+
+- Elasticsearch 8.11+
+- Logstash 8.11+
+- Kibana 8.11+
 
 See [requirements.txt](requirements.txt) for complete list.
 
@@ -179,11 +258,12 @@ See [requirements.txt](requirements.txt) for complete list.
 
 This is part of the **YMH345 - Computer Networks** course project at Sakarya University.
 
-**Project**: SentinelFS - AI-powered distributed security file system
-**Focus**: Real-time behavioral threat detection using hybrid machine learning
+**Project**: SentinelFS - AI-powered distributed security file system  
+**Focus**: Real-time behavioral threat detection using hybrid machine learning  
+**Version**: Enterprise monitoring and alerting system
 
 ---
 
-**Status**: ✅ Production Ready | **Version**: 3.0.0 | **Last Updated**: 2025-10-08
+**Status**: ✅ Production Ready | **Version**: 3.3.0 | **Last Updated**: 2025-10-08
 
-The system is fully functional and optimized for production deployment with comprehensive diagnostics and monitoring capabilities.
+The system is fully functional and optimized for production deployment with enterprise-grade monitoring, alerting, and incident response capabilities.

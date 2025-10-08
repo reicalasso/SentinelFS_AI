@@ -1,0 +1,127 @@
+{
+  "index_patterns": ["sentinelfs-*"],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "refresh_interval": "5s",
+    "index.codec": "best_compression"
+  },
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "service": {
+        "type": "keyword"
+      },
+      "environment": {
+        "type": "keyword"
+      },
+      "version": {
+        "type": "keyword"
+      },
+      "log_level": {
+        "type": "keyword"
+      },
+      "sentinelfs": {
+        "properties": {
+          "request_id": {
+            "type": "keyword"
+          },
+          "endpoint": {
+            "type": "keyword"
+          },
+          "method": {
+            "type": "keyword"
+          },
+          "status_code": {
+            "type": "integer"
+          },
+          "client_ip": {
+            "type": "ip"
+          },
+          "user_agent": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "useragent": {
+            "properties": {
+              "name": {
+                "type": "keyword"
+              },
+              "os": {
+                "type": "keyword"
+              },
+              "device": {
+                "type": "keyword"
+              }
+            }
+          },
+          "geoip": {
+            "properties": {
+              "country_name": {
+                "type": "keyword"
+              },
+              "city_name": {
+                "type": "keyword"
+              },
+              "location": {
+                "type": "geo_point"
+              }
+            }
+          },
+          "metrics": {
+            "properties": {
+              "response_time": {
+                "type": "float"
+              },
+              "memory_usage": {
+                "type": "float"
+              },
+              "cpu_usage": {
+                "type": "float"
+              },
+              "model_inference_time": {
+                "type": "float"
+              },
+              "drift_score": {
+                "type": "float"
+              }
+            }
+          },
+          "error": {
+            "properties": {
+              "type": {
+                "type": "keyword"
+              },
+              "message": {
+                "type": "text"
+              },
+              "traceback": {
+                "type": "text"
+              }
+            }
+          },
+          "model": {
+            "properties": {
+              "name": {
+                "type": "keyword"
+              },
+              "version": {
+                "type": "keyword"
+              },
+              "confidence": {
+                "type": "float"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
