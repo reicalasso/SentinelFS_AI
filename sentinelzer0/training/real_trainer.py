@@ -54,7 +54,7 @@ class RealWorldTrainer:
         class_weight_positive: float = 2.0,  # Weight for positive (anomaly) class
         patience: int = 10,
         checkpoint_dir: str = './checkpoints',
-        decision_threshold: float = 0.5,
+        decision_threshold: float = 0.535,
         early_stopping_metric: str = 'f1',
         min_delta: float = 1e-4,
         balance_classes: bool = True,

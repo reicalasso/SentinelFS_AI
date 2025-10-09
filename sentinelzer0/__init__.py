@@ -30,7 +30,7 @@ from .models.hybrid_detector import HybridThreatDetector
 from .data.real_feature_extractor import RealFeatureExtractor
 
 # Training functionality
-from .training.real_trainer import RealWorldTrainer
+# from .training.real_trainer import RealWorldTrainer  # Lazy import below
 
 # Evaluation
 from .evaluation.production_evaluator import ProductionEvaluator
@@ -77,6 +77,16 @@ __all__ = [
     # Utilities
     'get_logger',                   # Get configured logger
 ]
+
+def __getattr__(name):
+    if name == 'RealWorldTrainer':
+        from .training.real_trainer import RealWorldTrainer
+        return RealWorldTrainer
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+# Friendly aliases for production use
+ThreatDetector = HybridThreatDetector
+RealTimeEngine = RealTimeInferenceEngine
 
 # Friendly aliases for production use
 ThreatDetector = HybridThreatDetector

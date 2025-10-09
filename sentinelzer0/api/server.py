@@ -79,7 +79,13 @@ def get_valid_api_keys() -> Set[str]:
 
 VALID_API_KEYS = get_valid_api_keys()
 CORS_ORIGINS = os.getenv('SENTINELFS_CORS_ORIGINS', '*').split(',')
-MODEL_PATH = os.getenv('SENTINELFS_MODEL_PATH', 'models/production/sentinelfs_fixed.pt')
+MODEL_PATH = os.getenv('SENTINELFS_MODEL_PATH', 'models/production/trained_model.pt')
+COMPONENTS_DIR_CANDIDATES = [
+    os.getenv('SENTINELFS_COMPONENTS_DIR', ''),
+    'checkpoints/final',
+    'models/production/final'
+]
+METRICS_PATH = os.getenv('SENTINELFS_METRICS_PATH', 'models/production/training_metrics.json')
 
 
 async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
@@ -192,17 +198,19 @@ async def lifespan(app: FastAPI):
                     
                     # Try to get from checkpoint config if available
                     if 'model_config' in checkpoint:
+                        input_size = checkpoint['model_config'].get('input_size', 33)  # Default to 33 features
                         hidden_size = checkpoint['model_config'].get('hidden_size', hidden_size)
                         num_layers = checkpoint['model_config'].get('num_layers', num_layers)
                         dropout = checkpoint['model_config'].get('dropout', 0.3)
                     else:
+                        input_size = 33  # New feature count
                         dropout = 0.3
                     
-                    logger.logger.info(f"Detected architecture: hidden_size={hidden_size}, num_layers={num_layers}, dropout={dropout}")
+                    logger.logger.info(f"Detected architecture: input_size={input_size}, hidden_size={hidden_size}, num_layers={num_layers}, dropout={dropout}")
                     
                     # Create model with matching architecture
                     app_state.model = HybridThreatDetector(
-                        input_size=30,
+                        input_size=input_size,
                         hidden_size=hidden_size,
                         num_layers=num_layers,
                         dropout=dropout,
@@ -225,14 +233,39 @@ async def lifespan(app: FastAPI):
         # Fall back to default model if loading failed
         if not model_loaded:
             logger.logger.info("Using randomly initialized model (default architecture)")
-            app_state.model = HybridThreatDetector(input_size=30)
+            app_state.model = HybridThreatDetector(input_size=33)  # New feature count
         
+        # Load non-PyTorch components if available (Isolation Forest, thresholds)
+        for comp_dir in COMPONENTS_DIR_CANDIDATES:
+            if comp_dir and os.path.isdir(comp_dir):
+                try:
+                    app_state.model.load_components(comp_dir)
+                    logger.logger.info(f"✓ Loaded model components from {comp_dir}")
+                    break
+                except Exception as e:
+                    logger.logger.warning(f"Could not load components from {comp_dir}: {e}")
+
+        # Read decision threshold and sequence length from metrics if available
+        sequence_length = 64
+        threshold = 0.5
+        try:
+            if os.path.isfile(METRICS_PATH):
+                import json
+                with open(METRICS_PATH, 'r') as f:
+                    metrics = json.load(f)
+                threshold = float(metrics.get('decision_threshold', threshold))
+                # Prefer training sequence length if present in checkpoint or metrics
+                sequence_length = int(metrics.get('sequence_length', sequence_length))
+                logger.logger.info(f"Using trained params -> threshold={threshold:.3f}, sequence_length={sequence_length}")
+        except Exception as e:
+            logger.logger.warning(f"Could not read training metrics: {e}")
+
         # Initialize streaming engine
         logger.logger.info("Initializing streaming inference engine...")
         app_state.engine = StreamingInferenceEngine(
             model=app_state.model,
-            sequence_length=64,
-            threshold=0.5,
+            sequence_length=sequence_length,
+            threshold=threshold,
             device='auto'
         )
         

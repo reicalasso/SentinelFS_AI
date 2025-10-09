@@ -30,16 +30,100 @@ class RealFeatureExtractor:
     
     # File extensions categorized by risk and type
     EXECUTABLE_EXTENSIONS = {'.exe', '.dll', '.so', '.dylib', '.bin', '.bat', '.sh', '.cmd', '.msi', '.app'}
-    DOCUMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt'}
+    DOCUMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.txt', '.csv'}
     COMPRESSED_EXTENSIONS = {'.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz'}
     IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.ico'}
     CODE_EXTENSIONS = {'.py', '.js', '.java', '.c', '.cpp', '.h', '.rs', '.go', '.rb'}
-    ENCRYPTED_EXTENSIONS = {'.enc', '.encrypted', '.locked', '.crypted'}
+    ENCRYPTED_EXTENSIONS = {'.enc', '.encrypted', '.locked', '.crypted', '.crypt', '.aes', '.rsa', '.cerber', '.locky', '.wannacry'}
     
     # Suspicious file patterns (ransomware indicators)
     RANSOMWARE_PATTERNS = {
-        'extensions': {'.locked', '.encrypted', '.crypted', '.enc', '.crypt', '.crypto'},
-        'filenames': {'readme.txt', 'how_to_decrypt.txt', 'decrypt_instructions.txt'}
+        'extensions': {
+            '.locked', '.encrypted', '.crypted', '.enc', '.crypt', '.crypto', 
+            '.aes', '.rsa', '.cerber', '.locky', '.wannacry', '.zepto', '.osiris',
+            '.zzzzz', '.dharma', '.wallet', '.wcry', '.WNCRY', '.onion', '.exx',
+            '.ezz', '.ecc', '.ezz', '.abc', '.xyz', '.zzz', '.microc', '.dll5'
+        },
+        'filenames': {
+            'readme.txt', 'how_to_decrypt.txt', 'decrypt_instructions.txt',
+            'help_decrypt.txt', 'recovery_file.txt', 'restore_files.txt',
+            'help_recover_instructions.txt', 'readme_now.txt', 'read_me.txt'
+        }
+    }
+    
+    # Suspicious system paths
+    CRITICAL_SYSTEM_PATHS = {
+        '/etc/passwd', '/etc/shadow', '/etc/sudoers', '/etc/hosts',
+        '/boot/', '/sys/', '/proc/', 'C:\\Windows\\System32',
+        'C:\\Windows\\SysWOW64', '/usr/bin/', '/usr/sbin/', '/var/log/'
+    }
+    
+    # Trusted process names (allowlist - known legitimate applications)
+    TRUSTED_PROCESSES = {
+        # Document viewers/editors
+        'evince', 'okular', 'libreoffice', 'soffice', 'abiword', 'gedit', 'kate', 
+        'nano', 'vim', 'emacs', 'neovim', 'mousepad', 'pluma',
+        # Office applications
+        'writer', 'calc', 'impress', 'gnumeric', 'excel', 'word', 'powerpoint',
+        # IDEs and code editors
+        'vscode', 'code', 'sublime', 'atom', 'pycharm', 'intellij', 'eclipse',
+        'netbeans', 'brackets', 'notepad++',
+        # Browsers
+        'chrome', 'firefox', 'brave', 'edge', 'safari', 'chromium', 'opera',
+        # Media players/editors
+        'vlc', 'mpv', 'gimp', 'inkscape', 'blender', 'audacity', 'kdenlive',
+        'rhythmbox', 'totem', 'spotify',
+        # Development tools
+        'python3', 'python', 'node', 'npm', 'java', 'javac', 'gcc', 'g++',
+        'cargo', 'rustc', 'go', 'ruby', 'perl', 'php', 'pandoc',
+        # Terminals and shells
+        'bash', 'zsh', 'fish', 'sh', 'dash', 'gnome-terminal', 'konsole',
+        'xterm', 'terminator', 'alacritty',
+        # File managers
+        'nautilus', 'dolphin', 'thunar', 'nemo', 'pcmanfm', 'ranger',
+        # System processes
+        'systemd', 'cron', 'anacron', 'rsync', 'tar', 'gzip', 'zip', 'unzip',
+        'logrotate', 'updatedb', 'fc-cache', 'bleachbit',
+        # Web servers and system services
+        'apache2', 'httpd', 'nginx', 'mysql', 'postgres', 'ssh', 'sshd', 'mysqldump',
+        # Email and communication
+        'thunderbird', 'evolution', 'clipit',
+        # Package management
+        'apt', 'dpkg', 'fontconfig', 'steam',
+        # Printing and display
+        'cupsd', 'obs', 'thumbnailer',
+        # Networking
+        'NetworkManager', 'dockerd',
+        # Archive tools
+        '7z', 'unzip',
+        # Version control
+        'git'
+    }
+
+    # Legitimate file extensions (very low threat score)
+    LEGITIMATE_EXTENSIONS = {
+        # Documents
+        '.pdf', '.doc', '.docx', '.odt', '.rtf', '.txt',
+        # Spreadsheets  
+        '.xlsx', '.xls', '.csv', '.ods',
+        # Presentations
+        '.ppt', '.pptx', '.odp',
+        # Images
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.tiff', '.webp',
+        # Media
+        '.mp4', '.avi', '.mkv', '.mov', '.mp3', '.wav', '.flac', '.ogg',
+        # Code
+        '.py', '.js', '.html', '.css', '.java', '.cpp', '.c', '.rs', '.go',
+        # Config and Logs
+        '.json', '.xml', '.yaml', '.yml', '.conf', '.ini', '.toml', '.log', '.gz'
+    }
+    
+    # Suspicious process names
+    SUSPICIOUS_PROCESSES = {
+        'unknown', 'malware', 'trojan', 'virus', 'backdoor', 'nc', 'netcat',
+        'ncat', 'socat', 'mimikatz', 'psexec', 'powershell', 'cmd.exe',
+        'suspicious', 'hack', 'exploit', '.exe', 'payload', 'reverse',
+        'unknown_proc', 'cryptor', 'lockbit'  # Additional malware patterns
     }
     
     def __init__(self, window_size: int = 100, time_window_seconds: int = 300):
@@ -88,12 +172,14 @@ class RealFeatureExtractor:
         Returns:
             Feature vector as numpy array
         """
+        # Normalize diverse event schemas into canonical fields
+        evt = self._normalize_event(event)
         # Parse timestamp
-        timestamp = self._parse_timestamp(event.get('timestamp'))
-        user_id = event.get('user_id', 'unknown')
-        operation = event.get('operation', 'read')
-        file_path = event.get('file_path', '')
-        file_size = event.get('file_size', 0)
+        timestamp = self._parse_timestamp(evt.get('timestamp'))
+        user_id = evt.get('user_id', 'unknown')
+        operation = evt.get('operation', 'read')
+        file_path = evt.get('file_path', '')
+        file_size = evt.get('file_size', 0)
         
         # Update history
         self._update_history(user_id, event)
@@ -275,10 +361,34 @@ class RealFeatureExtractor:
         path_obj = Path(file_path)
         extension = path_obj.suffix.lower()
         filename = path_obj.name.lower()
+        file_path_lower = file_path.lower()
         
         # Ransomware indicators
         has_ransomware_extension = 1.0 if extension in self.RANSOMWARE_PATTERNS['extensions'] else 0.0
         has_ransomware_filename = 1.0 if any(pattern in filename for pattern in self.RANSOMWARE_PATTERNS['filenames']) else 0.0
+        
+        # Critical system path access
+        is_critical_path = 1.0 if any(path in file_path_lower for path in self.CRITICAL_SYSTEM_PATHS) else 0.0
+        
+        # Process trust evaluation from user_history
+        user_ops = list(self.user_history[user_id])
+        recent_process = None
+        if len(user_ops) > 0 and 'process' in user_ops[-1]:
+            recent_process = str(user_ops[-1].get('process', '')).lower()
+        
+        # Check if process is trusted (allowlist)
+        is_trusted_process = 1.0 if recent_process and any(
+            trusted in recent_process for trusted in self.TRUSTED_PROCESSES
+        ) else 0.0
+        
+        # Check if process is suspicious (blocklist)
+        is_suspicious_process = 1.0 if recent_process and any(
+            sus in recent_process for sus in self.SUSPICIOUS_PROCESSES
+        ) else 0.0
+        
+        # Override: Trusted processes reduce suspicion significantly
+        if is_trusted_process:
+            is_suspicious_process = 0.0
         
         # Rapid file modifications (indicator of encryption)
         user_ops = list(self.user_history[user_id])
@@ -326,35 +436,67 @@ class RealFeatureExtractor:
         hour = timestamp.hour
         is_unusual_time = 1.0 if hour < 6 or hour > 22 else 0.0
         
+        # Check if file extension is legitimate
+        is_legitimate_extension = 1.0 if extension in self.LEGITIMATE_EXTENSIONS else 0.0
+        
+        # Combine threat indicators for elevated score
+        threat_multiplier = 1.0
+        
+        # LEGITIMATE FILES: Significantly reduce threat score
+        if is_legitimate_extension > 0.5:
+            threat_multiplier *= 0.2  # Reduce by 80% for legitimate file types
+        
+        # TRUSTED PROCESSES: Significantly reduce threat score
+        if is_trusted_process > 0.5:
+            threat_multiplier *= 0.05  # Reduce by 95% for trusted processes
+            
+        # DOUBLE PROTECTION: Both trusted process AND legitimate file
+        if is_trusted_process > 0.5 and is_legitimate_extension > 0.5:
+            threat_multiplier *= 0.01  # Reduce by 99% for trusted + legitimate
+        
+        if is_critical_path > 0.5:
+            threat_multiplier *= 2.0  # Double the threat score for critical paths
+        if is_suspicious_process > 0.5:
+            threat_multiplier *= 2.0  # Double for suspicious processes
+        if has_ransomware_extension > 0.5 or has_ransomware_filename > 0.5:
+            threat_multiplier *= 3.0  # Triple for ransomware indicators
+        
         return np.array([
             has_ransomware_extension,
             has_ransomware_filename,
-            rapid_modifications,
+            rapid_modifications * threat_multiplier,
             min(size_change_ratio, 10.0),
-            delete_rate,
-            mass_operation_score,
+            delete_rate * threat_multiplier,
+            mass_operation_score * threat_multiplier,
             rename_rate,
             is_hidden,
-            is_unusual_time
+            is_unusual_time,
+            is_critical_path,
+            is_suspicious_process,
+            min(threat_multiplier / 3.0, 3.0),  # Normalized threat multiplier
+            is_trusted_process,  # Trusted process indicator
+            is_legitimate_extension  # NEW: Legitimate file extension indicator
         ], dtype=np.float32)
     
     def _update_history(self, user_id: str, event: Dict[str, Any]):
         """Update internal statistics with new event."""
-        self.user_history[user_id].append(event)
-        
-        file_path = event.get('file_path', '')
+        # Store normalized event representation for downstream computations
+        evt = self._normalize_event(event)
+        self.user_history[user_id].append(evt)
+
+        file_path = evt.get('file_path', '')
         if file_path:
             self.file_access_count[file_path] += 1
-            self.file_last_access[file_path] = self._parse_timestamp(event.get('timestamp'))
-            
-            file_size = event.get('file_size', 0)
+            self.file_last_access[file_path] = self._parse_timestamp(evt.get('timestamp'))
+
+            file_size = evt.get('file_size', 0)
             self.file_sizes[file_path].append(file_size)
             if len(self.file_sizes[file_path]) > 10:
                 self.file_sizes[file_path] = self.file_sizes[file_path][-10:]
-        
+
         # Update global statistics
         self.global_stats['total_operations'] += 1
-        operation = event.get('operation', 'read')
+        operation = evt.get('operation', 'read')
         self.global_stats['operations_per_type'][operation] += 1
     
     def update_user_baseline(self, user_id: str):
@@ -400,10 +542,12 @@ class RealFeatureExtractor:
             # Behavior (6)
             'ops_per_minute', 'operation_diversity', 'file_diversity',
             'log_avg_size', 'burstiness', 'baseline_deviation',
-            # Security (9)
+            # Security (14) - expanded with trust and legitimacy indicators
             'has_ransomware_ext', 'has_ransomware_name', 'rapid_modifications',
             'size_change_ratio', 'delete_rate', 'mass_operation_score',
-            'rename_rate', 'is_hidden', 'is_unusual_time'
+            'rename_rate', 'is_hidden', 'is_unusual_time', 'is_critical_path',
+            'is_suspicious_process', 'threat_multiplier', 'is_trusted_process',
+            'is_legitimate_extension'
         ]
     
     def get_num_features(self) -> int:
@@ -415,13 +559,64 @@ class RealFeatureExtractor:
         """Parse timestamp from various formats."""
         if isinstance(timestamp, datetime):
             return timestamp
-        elif isinstance(timestamp, str):
+        # Support numeric epoch seconds (float or int)
+        if isinstance(timestamp, (int, float)):
+            try:
+                return datetime.fromtimestamp(float(timestamp))
+            except Exception:
+                return datetime.now()
+        if isinstance(timestamp, str):
             try:
                 return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            except:
-                return datetime.now()
-        else:
-            return datetime.now()
+            except Exception:
+                # Fallback: try parse as epoch string
+                try:
+                    return datetime.fromtimestamp(float(timestamp))
+                except Exception:
+                    return datetime.now()
+        return datetime.now()
+
+    def _normalize_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """Map various event schemas to canonical keys used by extractor.
+        Canonical keys: timestamp, user_id, operation, file_path, file_size
+        """
+        if not isinstance(event, dict):
+            return {
+                'timestamp': datetime.now(),
+                'user_id': 'unknown',
+                'operation': 'read',
+                'file_path': '',
+                'file_size': 0
+            }
+        # Prefer explicit fields; fallback to common alternates from synthetic generator
+        ts = event.get('timestamp')
+        user_id = event.get('user_id') or event.get('user') or 'unknown'
+        # Map event_type to operation and normalize common verbs
+        op = event.get('operation') or event.get('event_type') or 'read'
+        op_norm = str(op).lower()
+        # Map CREATE/MODIFY/DELETE/CHMOD/CHOWN to our set
+        mapping = {
+            'create': 'write',
+            'modify': 'modify',
+            'delete': 'delete',
+            'rename': 'rename',
+            'chmod': 'modify',
+            'chown': 'modify'
+        }
+        op_norm = mapping.get(op_norm, op_norm)
+        file_path = event.get('file_path') or event.get('path') or ''
+        # Prefer file_size, fallback to common API key 'size'
+        file_size = event.get('file_size') if event.get('file_size') is not None else event.get('size', 0)
+        # Extract process name if available
+        process = event.get('process') or event.get('process_name') or ''
+        return {
+            'timestamp': ts,
+            'user_id': user_id,
+            'operation': op_norm,
+            'file_path': file_path,
+            'file_size': file_size,
+            'process': process
+        }
     
     @staticmethod
     def _calculate_entropy(s: str) -> float:
@@ -442,6 +637,93 @@ class RealFeatureExtractor:
             entropy -= probability * math.log2(probability)
         
         return entropy
+    
+    def _extract_advanced_threat_features(self, file_path: str, file_size: int, 
+                                        operation: str, user_id: str, timestamp: datetime) -> np.ndarray:
+        """Extract advanced threat intelligence features."""
+        path_obj = Path(file_path)
+        extension = path_obj.suffix.lower()
+        filename = path_obj.name.lower()
+        file_path_lower = file_path.lower()
+        
+        user_ops = list(self.user_history[user_id])
+        recent_ops = [
+            op for op in user_ops[-100:]  # Last 100 operations
+            if (timestamp - self._parse_timestamp(op.get('timestamp'))).total_seconds() < 300  # 5 minutes
+        ]
+        
+        # Pattern-based threat detection
+        
+        # 1. File entropy analysis (encrypted/compressed files have high entropy)
+        entropy_score = self._calculate_entropy(filename) / 8.0  # Normalize to 0-1
+        
+        # 2. Double extension detection (.pdf.exe, .doc.scr)
+        parts = filename.split('.')
+        has_double_extension = 1.0 if len(parts) > 2 and parts[-2] in {
+            'pdf', 'doc', 'docx', 'jpg', 'png', 'txt', 'zip'
+        } and parts[-1] in {'exe', 'scr', 'bat', 'cmd', 'pif'} else 0.0
+        
+        # 3. Suspicious file location patterns
+        is_temp_execution = 1.0 if any(temp in file_path_lower for temp in [
+            '/tmp/', '\\temp\\', '/var/tmp/', 'appdata/local/temp', 'downloads'
+        ]) and extension in {'.exe', '.bat', '.sh', '.cmd'} else 0.0
+        
+        # 4. Process diversity (multiple different processes in short time)
+        recent_processes = set()
+        for op in recent_ops:
+            if 'process' in op:
+                recent_processes.add(str(op['process']).lower())
+        process_diversity = min(len(recent_processes) / 10.0, 1.0)  # Normalize
+        
+        # 5. File access velocity (files accessed per minute)
+        unique_files = set()
+        for op in recent_ops:
+            if 'file_path' in op:
+                unique_files.add(op['file_path'])
+        file_velocity = min(len(unique_files) / 20.0, 1.0)  # Normalize
+        
+        # 6. Cross-directory operations (accessing multiple directories)
+        directories = set()
+        for op in recent_ops:
+            if 'file_path' in op:
+                directories.add(str(Path(op['file_path']).parent))
+        directory_spread = min(len(directories) / 10.0, 1.0)
+        
+        # 7. Privilege escalation patterns
+        has_privilege_paths = 1.0 if any(priv in file_path_lower for priv in [
+            '/etc/', '/root/', '/usr/bin/', '/usr/sbin/', 'system32', 'syswow64',
+            'c:\\windows\\', 'c:\\program files'
+        ]) else 0.0
+        
+        # 8. Network-related file operations (potential exfiltration)
+        network_related = 1.0 if any(net in filename for net in [
+            'network', 'tcp', 'udp', 'ssh', 'ftp', 'http', 'curl', 'wget', 'nc'
+        ]) else 0.0
+        
+        # 9. Crypto/mining indicators
+        crypto_indicators = 1.0 if any(crypto in filename for crypto in [
+            'bitcoin', 'btc', 'ethereum', 'eth', 'mining', 'miner', 'crypto',
+            'wallet', 'xmrig', 'monero', 'xmr'
+        ]) else 0.0
+        
+        # 10. Log manipulation patterns
+        log_tampering = 1.0 if (operation.lower() in ['delete', 'modify'] and 
+                               any(log in file_path_lower for log in [
+            '/var/log/', 'event.log', 'security.log', 'auth.log', 'syslog'
+        ])) else 0.0
+        
+        return np.array([
+            entropy_score,
+            has_double_extension,  
+            is_temp_execution,
+            process_diversity,
+            file_velocity,
+            directory_spread,
+            has_privilege_paths,
+            network_related,
+            crypto_indicators,
+            log_tampering
+        ], dtype=np.float32)
     
     def reset(self):
         """Reset all internal state."""

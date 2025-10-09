@@ -133,6 +133,8 @@ training_results = trainer.train_with_diagnostics(
 trainer.save_model('../models/production/sentinelfs_production.pt')
 ```
 
+> **Heads up:** `RealWorldTrainer` now tracks precision/recall/AUC each epoch, rebalances classes with weighted sampling, and can stream metrics to MLflow by passing `enable_mlflow=True`.
+
 ## 📚 API Reference
 
 ### Core Classes
@@ -308,6 +310,7 @@ sentinelzer0/
 - ✅ GPU optimization: RTX 5060 support with real monitoring
 - ✅ Production hardening: Comprehensive error handling and logging
 - ✅ Performance improvements: Optimized inference pipeline
+- ✅ Smarter training loop: adaptive thresholding, MLflow logging, class-balanced sampling
 
 ### v2.0.0 (2025-10-07)
 - ✅ Real-world features: 30 indicators from actual file operations

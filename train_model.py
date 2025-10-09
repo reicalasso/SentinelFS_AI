@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 
 
 def generate_synthetic_events(
-    num_normal: int = 4000,
+    num_normal: int = 8000,
     num_anomaly: int = 1000,
     seed: int = 42
 ) -> Tuple[List[Dict], np.ndarray]:
@@ -42,7 +42,7 @@ def generate_synthetic_events(
     Generate synthetic file system events for training.
     
     Args:
-        num_normal: Number of normal events
+        num_normal: Number of normal events (increased for better balance)
         num_anomaly: Number of anomalous events
         seed: Random seed for reproducibility
         
@@ -62,13 +62,18 @@ def generate_synthetic_events(
     # User profiles
     users = ['alice', 'bob', 'charlie', 'admin', 'service_account']
     
-    # Normal file extensions
-    normal_extensions = [
-        '.txt', '.pdf', '.doc', '.docx', '.xlsx', '.csv',
-        '.jpg', '.png', '.gif', '.mp4', '.mp3',
-        '.py', '.js', '.json', '.xml', '.html', '.css',
-        '.log', '.conf', '.ini'
-    ]
+    # Normal file extensions (categorized for realistic patterns)
+    document_extensions = ['.pdf', '.doc', '.docx', '.odt', '.txt', '.rtf']
+    spreadsheet_extensions = ['.xlsx', '.xls', '.csv', '.ods']
+    presentation_extensions = ['.ppt', '.pptx', '.odp']
+    image_extensions = ['.jpg', '.png', '.gif', '.bmp', '.svg']
+    media_extensions = ['.mp4', '.mp3', '.avi', '.mkv', '.wav']
+    code_extensions = ['.py', '.js', '.java', '.cpp', '.rs', '.go', '.html', '.css']
+    config_extensions = ['.json', '.xml', '.yaml', '.yml', '.conf', '.ini']
+    
+    normal_extensions = (document_extensions + spreadsheet_extensions + 
+                        presentation_extensions + image_extensions + 
+                        media_extensions + code_extensions + config_extensions)
     
     # Ransomware extensions
     ransomware_extensions = [
@@ -76,11 +81,17 @@ def generate_synthetic_events(
         '.aes', '.rsa', '.cerber', '.locky', '.wannacry'
     ]
     
-    # Normal process names
-    normal_processes = [
-        'chrome', 'firefox', 'vscode', 'python3', 'node',
-        'libreoffice', 'gimp', 'vlc', 'spotify', 'terminal'
-    ]
+    # Normal process names (TRUSTED APPLICATIONS)
+    document_processes = ['evince', 'okular', 'libreoffice', 'abiword', 'gedit', 'kate', 'nano', 'vim']
+    spreadsheet_processes = ['libreoffice', 'gnumeric', 'excel']
+    ide_processes = ['vscode', 'sublime', 'atom', 'pycharm', 'intellij', 'eclipse']
+    browser_processes = ['chrome', 'firefox', 'brave', 'edge', 'safari']
+    media_processes = ['vlc', 'mpv', 'gimp', 'inkscape', 'blender', 'audacity']
+    terminal_processes = ['bash', 'zsh', 'python3', 'node', 'java', 'gcc']
+    system_processes = ['nautilus', 'dolphin', 'thunar', 'systemd', 'cron']
+    
+    normal_processes = (document_processes + spreadsheet_processes + ide_processes + 
+                       browser_processes + media_processes + terminal_processes + system_processes)
     
     # Malicious process names
     malicious_processes = [
@@ -91,31 +102,126 @@ def generate_synthetic_events(
     
     base_time = datetime.now() - timedelta(days=30)
     
-    # ===== GENERATE NORMAL EVENTS =====
-    logger.info(f"Generating {num_normal} normal events...")
+    # ===== GENERATE ADVANCED NORMAL EVENTS =====
+    logger.info(f"Generating {num_normal} normal events with realistic patterns...")
+    
+    # User behavior patterns (more sophisticated)
+    user_profiles = {
+        'alice': {'work_start': 9, 'work_end': 17, 'productivity': 0.8, 'tech_savvy': 0.6},
+        'bob': {'work_start': 8, 'work_end': 18, 'productivity': 0.9, 'tech_savvy': 0.9},
+        'charlie': {'work_start': 10, 'work_end': 16, 'productivity': 0.7, 'tech_savvy': 0.4},
+        'admin': {'work_start': 7, 'work_end': 20, 'productivity': 0.9, 'tech_savvy': 1.0},
+        'service_account': {'work_start': 0, 'work_end': 23, 'productivity': 1.0, 'tech_savvy': 1.0}
+    }
+    
+    # Realistic workflow patterns
+    workflow_templates = {
+        'document_editing': {
+            'duration_minutes': (15, 120), 'operations': ['CREATE', 'MODIFY', 'MODIFY', 'MODIFY'],
+            'processes': document_processes, 'extensions': document_extensions
+        },
+        'development_session': {
+            'duration_minutes': (30, 240), 'operations': ['CREATE', 'MODIFY'] * 10,
+            'processes': ide_processes + terminal_processes, 'extensions': code_extensions
+        },
+        'data_analysis': {
+            'duration_minutes': (45, 180), 'operations': ['CREATE', 'MODIFY', 'MODIFY'],
+            'processes': ['python3', 'jupyter', 'rstudio', 'excel'], 'extensions': ['.csv', '.xlsx', '.py', '.r']
+        },
+        'media_processing': {
+            'duration_minutes': (20, 90), 'operations': ['CREATE', 'MODIFY'],
+            'processes': media_processes, 'extensions': image_extensions + media_extensions
+        }
+    }
+    
+    # Generate normal events with realistic temporal clustering
+    current_time = base_time
+    event_clusters = []  # Group related events
     
     for i in range(num_normal):
         user = random.choice(users)
-        ext = random.choice(normal_extensions)
-        process = random.choice(normal_processes)
-        hour = random.randint(8, 18)  # Business hours
+        profile = user_profiles[user]
         
-        # Normal operations
-        operation = random.choice(['CREATE', 'MODIFY', 'DELETE'])
+        # Realistic time patterns
+        if random.random() < 0.8:  # 80% during work hours
+            hour = random.randint(profile['work_start'], profile['work_end'])
+        else:  # 20% outside work hours
+            hour = random.choice([random.randint(0, 6), random.randint(22, 23)])
+        
+        # Choose workflow pattern
+        workflow = random.choice(list(workflow_templates.keys()))
+        template = workflow_templates[workflow]
+        
+        # Generate file type and matching process (more sophisticated)
+        if workflow == 'document_editing':
+            ext = random.choice(template['extensions'])
+            # Ensure trusted processes are matched with legitimate extensions
+            process = random.choice(template['processes'])
+            # Simulate realistic document editing patterns
+            if i % 4 == 0:  # Start new document
+                operation = 'CREATE'
+                size = random.randint(1024, 10*1024)  # Small initial size
+            else:  # Edit existing document
+                operation = 'MODIFY'
+                size = random.randint(50*1024, 2*1024*1024)  # Growing size
+            path_dir = random.choice(['documents', 'work', 'reports', 'papers'])
+            
+        elif workflow == 'development_session':
+            ext = random.choice(template['extensions'])
+            process = random.choice(template['processes'])
+            operation = random.choices(['MODIFY', 'CREATE', 'DELETE'], weights=[0.7, 0.25, 0.05])[0]
+            size = random.randint(512, 100*1024)  # Code files are usually small
+            path_dir = random.choice(['projects', 'code', 'dev', 'src', 'workspace'])
+            
+        elif workflow == 'data_analysis':
+            ext = random.choice(template['extensions'])
+            process = random.choice(template['processes'])
+            operation = random.choices(['MODIFY', 'CREATE'], weights=[0.8, 0.2])[0]
+            size = random.randint(10*1024, 50*1024*1024)  # Data files can be large
+            path_dir = random.choice(['data', 'analysis', 'datasets', 'research'])
+            
+        else:  # media_processing
+            ext = random.choice(template['extensions'])
+            process = random.choice(template['processes'])
+            operation = random.choices(['CREATE', 'MODIFY', 'DELETE'], weights=[0.5, 0.4, 0.1])[0]
+            # Realistic media file sizes
+            if ext in ['.jpg', '.png', '.gif']:
+                size = random.randint(50*1024, 10*1024*1024)  # 50KB - 10MB
+            else:  # Video files
+                size = random.randint(10*1024*1024, 500*1024*1024)  # 10MB - 500MB
+            path_dir = random.choice(['pictures', 'videos', 'media', 'downloads'])
+        
+        # Add temporal clustering (simulate work sessions)
+        if i % 10 == 0:  # Start new session
+            session_offset = random.randint(0, 30)  # Minutes within hour
+        else:
+            session_offset = (session_offset + random.randint(1, 5)) % 60
+        
+        # Realistic file naming patterns
+        if workflow == 'document_editing':
+            filename = f"{random.choice(['report', 'document', 'memo', 'notes', 'draft'])}_{random.randint(1, 100)}{ext}"
+        elif workflow == 'development_session':
+            filename = f"{random.choice(['main', 'utils', 'config', 'test', 'app'])}_{random.randint(1, 50)}{ext}"
+        elif workflow == 'data_analysis':
+            filename = f"{random.choice(['dataset', 'analysis', 'results', 'model'])}_{random.randint(1, 20)}{ext}"
+        else:
+            filename = f"{random.choice(['image', 'video', 'photo', 'clip'])}_{random.randint(1, 1000)}{ext}"
         
         event = {
-            'timestamp': (base_time + timedelta(hours=hour, minutes=i % 60)).timestamp(),
+            'timestamp': (base_time + timedelta(days=i//200, hours=hour, minutes=session_offset)).timestamp(),
             'event_type': operation,
-            'path': f'/home/{user}/documents/file_{i}{ext}',
+            'path': f'/home/{user}/{path_dir}/{filename}',
             'process_name': process,
             'user': user,
-            'file_size': random.randint(1024, 10*1024*1024),  # 1KB - 10MB
+            'file_size': size,
             'pid': random.randint(1000, 9999),
             'ppid': random.randint(500, 999),
             'extension': ext,
             'is_system': False,
-            'is_hidden': False,
-            'permissions': 644
+            'is_hidden': random.random() < 0.05,  # 5% hidden files (config files)
+            'permissions': random.choice([644, 755, 600]),  # Realistic permissions
+            'workflow_type': workflow,
+            'user_profile': profile
         }
         
         events.append(event)
@@ -134,28 +240,89 @@ def generate_synthetic_events(
     
     anomaly_idx = 0
     
-    # 1. RANSOMWARE ATTACKS (40%)
-    logger.info(f"  - {num_ransomware} ransomware events")
+    # 1. ADVANCED RANSOMWARE ATTACKS (40%)
+    logger.info(f"  - {num_ransomware} advanced ransomware events")
+    ransomware_families = {
+        'lockbit': {'extensions': ['.lockbit', '.locked'], 'processes': ['lockbit.exe', 'encrypt.exe']},
+        'wannacry': {'extensions': ['.wannacry', '.WNCRY'], 'processes': ['wannacry.exe', 'tasksche.exe']},
+        'ryuk': {'extensions': ['.ryuk', '.ryk'], 'processes': ['ryuk.exe', 'rykenc.exe']},
+        'maze': {'extensions': ['.maze', '.encrypted'], 'processes': ['maze.exe', 'enc.exe']}
+    }
+    
     for i in range(num_ransomware):
         user = random.choice(users[:3])  # Target regular users
-        ransom_ext = random.choice(ransomware_extensions)
-        malware = random.choice(malicious_processes)
+        family = random.choice(list(ransomware_families.keys()))
+        family_info = ransomware_families[family]
         
-        # Rapid file encryption pattern
-        event = {
-            'timestamp': (threat_start + timedelta(seconds=anomaly_idx * 2)).timestamp(),
-            'event_type': random.choice(['CREATE', 'MODIFY']),
-            'path': f'/home/{user}/documents/important_{i}{ransom_ext}',
-            'process_name': malware,
-            'user': user,
-            'file_size': random.randint(100*1024, 5*1024*1024),
-            'pid': random.randint(10000, 19999),
-            'ppid': 1,  # Spawned from init (suspicious)
-            'extension': ransom_ext,
-            'is_system': False,
-            'is_hidden': False,
-            'permissions': 666  # World writable (suspicious)
-        }
+        # Simulate realistic ransomware behavior patterns
+        attack_phase = i % 4  # 4 phases of ransomware attack
+        
+        if attack_phase == 0:  # Initial infection
+            event = {
+                'timestamp': (threat_start + timedelta(minutes=anomaly_idx * 0.5)).timestamp(),
+                'event_type': 'CREATE',
+                'path': f'/tmp/{random.choice(["update", "install", "setup"])}.exe',
+                'process_name': random.choice(['svchost.exe', 'winlogon.exe', 'explorer.exe']),
+                'user': user,
+                'file_size': random.randint(500*1024, 2*1024*1024),
+                'pid': random.randint(10000, 19999),
+                'ppid': 1,
+                'extension': '.exe',
+                'is_system': False,
+                'is_hidden': True,
+                'permissions': 777,
+                'attack_phase': 'infection'
+            }
+        elif attack_phase == 1:  # Reconnaissance
+            event = {
+                'timestamp': (threat_start + timedelta(minutes=anomaly_idx * 0.5 + 1)).timestamp(),
+                'event_type': 'MODIFY',
+                'path': random.choice(['/etc/passwd', '/home/.ssh/known_hosts', f'/home/{user}/.bash_history']),
+                'process_name': random.choice(family_info['processes']),
+                'user': user,
+                'file_size': random.randint(1024, 10*1024),
+                'pid': random.randint(10000, 19999),
+                'ppid': random.randint(10000, 19999),
+                'extension': '',
+                'is_system': True,
+                'is_hidden': False,
+                'permissions': 600,
+                'attack_phase': 'reconnaissance'
+            }
+        elif attack_phase == 2:  # Lateral movement
+            event = {
+                'timestamp': (threat_start + timedelta(minutes=anomaly_idx * 0.5 + 2)).timestamp(),
+                'event_type': 'CREATE',
+                'path': f'/home/{random.choice(users)}/shared/{random.choice(["backup", "important", "data"])}{random.choice(family_info["extensions"])}',
+                'process_name': random.choice(family_info['processes']),
+                'user': 'admin',  # Privilege escalation
+                'file_size': random.randint(10*1024*1024, 100*1024*1024),
+                'pid': random.randint(10000, 19999),
+                'ppid': 1,
+                'extension': random.choice(family_info['extensions']),
+                'is_system': False,
+                'is_hidden': False,
+                'permissions': 666,
+                'attack_phase': 'lateral_movement'
+            }
+        else:  # Mass encryption
+            original_file = random.choice(['document', 'photo', 'video', 'database'])
+            event = {
+                'timestamp': (threat_start + timedelta(minutes=anomaly_idx * 0.5 + 3)).timestamp(),
+                'event_type': random.choice(['MODIFY', 'CREATE']),
+                'path': f'/home/{user}/{random.choice(["documents", "pictures", "data"])}/{original_file}_{i}{random.choice(family_info["extensions"])}',
+                'process_name': random.choice(family_info['processes']),
+                'user': user,
+                'file_size': random.randint(100*1024, 50*1024*1024),
+                'pid': random.randint(10000, 19999),
+                'ppid': random.randint(10000, 19999),
+                'extension': random.choice(family_info['extensions']),
+                'is_system': False,
+                'is_hidden': False,
+                'permissions': 666,
+                'attack_phase': 'encryption',
+                'ransomware_family': family
+            }
         
         events.append(event)
         labels.append(1)  # Anomaly
@@ -257,7 +424,7 @@ def train_model(
     num_epochs: int = 50,
     batch_size: int = 32,
     sequence_length: int = 64,
-    learning_rate: float = 0.001,
+    learning_rate: float = 0.005,
     use_gpu: bool = False,
     save_path: str = 'models/production/trained_model.pt'
 ) -> Dict:
@@ -291,9 +458,9 @@ def train_model(
     if use_gpu and not torch.cuda.is_available():
         logger.warning("GPU requested but not available, using CPU")
     
-    # Generate synthetic data
+    # Generate synthetic data (increased normal events for better balance)
     all_events, all_labels = generate_synthetic_events(
-        num_normal=4000,
+        num_normal=12000,  # Increase normal events for better balance
         num_anomaly=1000
     )
     
@@ -320,9 +487,11 @@ def train_model(
     logger.info("Initializing model and trainer...")
     
     feature_extractor = RealFeatureExtractor()
+    num_features = feature_extractor.get_num_features()
+    logger.info(f"Feature extractor produces {num_features} features")
     
     model = HybridThreatDetector(
-        input_size=30,  # Feature dimension
+        input_size=num_features,  # Feature dimension (33 with new features)
         hidden_size=128,
         num_layers=2,
         dropout=0.3
@@ -367,11 +536,11 @@ def train_model(
     checkpoint = {
         'model_state_dict': model.state_dict(),
         'feature_extractor_config': {
-            'input_size': 30,
+            'input_size': num_features,
             'sequence_length': sequence_length
         },
         'model_config': {
-            'input_size': 30,
+            'input_size': num_features,
             'hidden_size': 128,
             'num_layers': 2,
             'dropout': 0.3
@@ -393,64 +562,88 @@ def train_model(
     logger.info("="*80)
     logger.info("TEST SET EVALUATION")
     logger.info("="*80)
-    
+
     test_features = trainer._prepare_sequences(test_events, sequence_length)
     test_labels_aligned = trainer._align_labels(test_labels, len(test_features))
-    
+
     # Create test loader
     test_loader = trainer._create_dataloader(
         test_features, test_labels_aligned, batch_size, shuffle=False
     )
-    
+
     # Evaluate
     model.eval()
     model = model.to(device)  # Ensure model is on correct device
-    all_preds = []
-    all_targets = []
-    
+
+    decision_threshold = history.get('decision_threshold', trainer.decision_threshold)
+    logger.info("Using decision threshold: %.3f", decision_threshold)
+
+    all_scores: List[float] = []
+    all_targets: List[int] = []
+
     with torch.no_grad():
         for batch_features, batch_labels in test_loader:
             batch_features = batch_features.to(device)
             outputs = model(batch_features)
-            
+
             if isinstance(outputs, tuple):
                 outputs = outputs[0]
-            
-            preds = (torch.sigmoid(outputs) > 0.5).float().cpu().numpy()
-            all_preds.extend(preds)
-            all_targets.extend(batch_labels.numpy())
-    
-    all_preds = np.array(all_preds)
-    all_targets = np.array(all_targets)
-    
-    # Calculate metrics
-    accuracy = (all_preds == all_targets).mean()
-    precision = ((all_preds == 1) & (all_targets == 1)).sum() / max(1, (all_preds == 1).sum())
-    recall = ((all_preds == 1) & (all_targets == 1)).sum() / max(1, (all_targets == 1).sum())
-    f1 = 2 * precision * recall / max(0.001, precision + recall)
-    
-    logger.info(f"Test Set Results:")
-    logger.info(f"  Accuracy: {accuracy:.4f}")
-    logger.info(f"  Precision: {precision:.4f}")
-    logger.info(f"  Recall: {recall:.4f}")
-    logger.info(f"  F1-Score: {f1:.4f}")
-    
+
+            scores = outputs.detach().cpu().numpy().flatten()
+            all_scores.extend(scores)
+            all_targets.extend(batch_labels.numpy().flatten())
+
+    score_array = np.array(all_scores, dtype=np.float32)
+    target_array = np.array(all_targets, dtype=np.int32)
+
+    test_metrics = trainer._calculate_classification_metrics(
+        target_array,
+        score_array,
+        threshold=decision_threshold
+    )
+
+    logger.info("Test Set Results:")
+    logger.info("  Accuracy: %.4f", test_metrics['accuracy'])
+    logger.info("  Precision: %.4f", test_metrics['precision'])
+    logger.info("  Recall: %.4f", test_metrics['recall'])
+    logger.info("  F1-Score: %.4f", test_metrics['f1'])
+    logger.info("  ROC-AUC: %.4f", test_metrics['roc_auc'])
+    logger.info("  PR-AUC: %.4f", test_metrics['pr_auc'])
+    logger.info(
+        "  Score stats -> min: %.4f, 25%%: %.4f, median: %.4f, 75%%: %.4f, max: %.4f",
+        float(np.min(score_array)) if score_array.size else 0.0,
+        float(np.percentile(score_array, 25)) if score_array.size else 0.0,
+        float(np.median(score_array)) if score_array.size else 0.0,
+        float(np.percentile(score_array, 75)) if score_array.size else 0.0,
+        float(np.max(score_array)) if score_array.size else 0.0
+    )
+
     # Save metrics
     metrics_path = save_path_obj.parent / 'training_metrics.json'
+    training_history = history.get('history', {})
+    best_metrics_summary = history.get('best_metrics', {})
+    best_val_metrics = best_metrics_summary.get('best_val_metrics', {})
+
     metrics = {
-        'test_accuracy': float(accuracy),
-        'test_precision': float(precision),
-        'test_recall': float(recall),
-        'test_f1': float(f1),
-        'best_val_f1': history.get('best_val_f1', 0.0),
-        'best_epoch': history.get('best_epoch', 0),
-        'total_epochs': num_epochs,
+        'test_accuracy': float(test_metrics['accuracy']),
+        'test_precision': float(test_metrics['precision']),
+        'test_recall': float(test_metrics['recall']),
+        'test_f1': float(test_metrics['f1']),
+        'test_roc_auc': float(test_metrics['roc_auc']),
+        'test_pr_auc': float(test_metrics['pr_auc']),
+        'best_val_f1': float(best_val_metrics.get('f1', training_history.get('best_val_f1', 0.0))),
+        'best_val_precision': float(best_val_metrics.get('precision', training_history.get('best_val_precision', 0.0))),
+        'best_val_recall': float(best_val_metrics.get('recall', training_history.get('best_val_recall', 0.0))),
+        'best_epoch': int(best_metrics_summary.get('best_epoch', training_history.get('best_epoch', 0) or 0)),
+        'total_epochs': int(len(training_history.get('train_loss', []))),
+        'decision_threshold': float(decision_threshold),
+        'training_time_seconds': float(history.get('training_time', 0.0)),
         'timestamp': datetime.now().isoformat()
     }
-    
+
     with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=2)
-    
+
     logger.info(f"Metrics saved to: {metrics_path}")
     
     logger.info("="*80)
@@ -481,7 +674,7 @@ def main():
         help='Event sequence length (default: 64)'
     )
     parser.add_argument(
-        '--learning-rate', type=float, default=0.001,
+        '--learning-rate', type=float, default=0.005,
         help='Learning rate (default: 0.001)'
     )
     parser.add_argument(
