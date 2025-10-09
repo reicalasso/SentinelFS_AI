@@ -122,7 +122,6 @@ logs/
 # Packed models, checkpoints, and results (project-specific)
 # Keep curated baseline artifacts but ignore run-time outputs
 checkpoints/
-models/
 models/training_*.pt
 models/**/*.pth
 models/**/*.ckpt
